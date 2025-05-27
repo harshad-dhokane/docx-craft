@@ -26,7 +26,7 @@ const Dashboard = () => {
   if (templatesLoading || pdfsLoading) {
     return (
       <DashboardLayout>
-        <div className="p-6 flex items-center justify-center">
+        <div className="p-6 flex items-center justify-center min-h-[400px]">
           <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
       </DashboardLayout>
@@ -35,78 +35,88 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-8 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600">Manage your templates and generated PDFs</p>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard</h1>
+            <p className="text-gray-600 text-lg">Manage your templates and generated PDFs</p>
           </div>
           <Button
             onClick={handleUploadTemplate}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-200"
+            size="lg"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-5 w-5 mr-2" />
             Upload Template
           </Button>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Templates</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">Total Templates</CardTitle>
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{templates.length}</div>
-              <p className="text-xs text-muted-foreground">
-                Ready to use
-              </p>
+              <div className="text-3xl font-bold text-gray-900">{templates.length}</div>
+              <p className="text-sm text-gray-500 mt-1">Ready to use</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Generated PDFs</CardTitle>
-              <Download className="h-4 w-4 text-muted-foreground" />
+          
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">Generated PDFs</CardTitle>
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Download className="h-5 w-5 text-green-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{generatedPDFs.length}</div>
-              <p className="text-xs text-muted-foreground">
-                Available for download
-              </p>
+              <div className="text-3xl font-bold text-gray-900">{generatedPDFs.length}</div>
+              <p className="text-sm text-gray-500 mt-1">Available for download</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Usage</CardTitle>
-              <Upload className="h-4 w-4 text-muted-foreground" />
+          
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">Total Usage</CardTitle>
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Upload className="h-5 w-5 text-purple-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-3xl font-bold text-gray-900">
                 {templates.reduce((sum, t) => sum + t.use_count, 0)}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Templates used
-              </p>
+              <p className="text-sm text-gray-500 mt-1">Templates used</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Templates Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Templates</CardTitle>
-            <CardDescription>
-              Manage and use your uploaded document templates
-            </CardDescription>
+        <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl text-gray-900">Your Templates</CardTitle>
+                <CardDescription className="text-gray-600">
+                  Manage and use your uploaded document templates
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {templates.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 mb-4">No templates uploaded yet</p>
-                <Button onClick={handleUploadTemplate}>
+              <div className="text-center py-12">
+                <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                  <FileText className="h-10 w-10 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No templates uploaded yet</h3>
+                <p className="text-gray-500 mb-6">Get started by uploading your first document template</p>
+                <Button onClick={handleUploadTemplate} className="bg-gradient-to-r from-blue-600 to-blue-700">
                   <Upload className="h-4 w-4 mr-2" />
                   Upload Your First Template
                 </Button>
@@ -116,30 +126,31 @@ const Dashboard = () => {
                 {templates.map((template) => (
                   <div
                     key={template.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between p-6 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:shadow-md"
                   >
                     <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-blue-100 rounded-md">
+                      <div className="p-3 bg-blue-100 rounded-xl">
                         <FileText className="h-6 w-6 text-blue-600" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">{template.name}</h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <h3 className="font-semibold text-gray-900 text-lg">{template.name}</h3>
+                        <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
                           <span className="flex items-center">
                             <Calendar className="h-4 w-4 mr-1" />
                             {new Date(template.upload_date).toLocaleDateString()}
                           </span>
                           <span>Used {template.use_count} times</span>
+                          <span>{template.placeholders.length} fields</span>
                         </div>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {template.placeholders.slice(0, 3).map((placeholder, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {template.placeholders.slice(0, 4).map((placeholder, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
                               {placeholder}
                             </Badge>
                           ))}
-                          {template.placeholders.length > 3 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{template.placeholders.length - 3} more
+                          {template.placeholders.length > 4 && (
+                            <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-600">
+                              +{template.placeholders.length - 4} more
                             </Badge>
                           )}
                         </div>
@@ -147,8 +158,8 @@ const Dashboard = () => {
                     </div>
                     <Button 
                       variant="outline" 
-                      size="sm"
                       onClick={() => handleUseTemplate(template.id)}
+                      className="hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors"
                     >
                       Use Template
                     </Button>
@@ -160,33 +171,40 @@ const Dashboard = () => {
         </Card>
 
         {/* Generated PDFs Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Generated PDFs</CardTitle>
-            <CardDescription>
-              Download and manage your generated PDF documents
-            </CardDescription>
+        <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl text-gray-900">Generated PDFs</CardTitle>
+                <CardDescription className="text-gray-600">
+                  Download and manage your generated PDF documents
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {generatedPDFs.length === 0 ? (
-              <div className="text-center py-8">
-                <Download className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No PDFs generated yet</p>
+              <div className="text-center py-12">
+                <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                  <Download className="h-10 w-10 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No PDFs generated yet</h3>
+                <p className="text-gray-500">Use a template to generate your first PDF</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {generatedPDFs.map((pdf) => (
                   <div
                     key={pdf.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between p-6 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:shadow-md"
                   >
                     <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-red-100 rounded-md">
+                      <div className="p-3 bg-red-100 rounded-xl">
                         <FileText className="h-6 w-6 text-red-600" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">{pdf.name}</h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <h3 className="font-semibold text-gray-900 text-lg">{pdf.name}</h3>
+                        <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
                           <span>From: {pdf.template_name}</span>
                           <span className="flex items-center">
                             <Calendar className="h-4 w-4 mr-1" />
@@ -203,6 +221,7 @@ const Dashboard = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleDownloadPDF(pdf.id)}
+                        className="hover:bg-green-50 hover:border-green-300 hover:text-green-700"
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Download
@@ -211,6 +230,7 @@ const Dashboard = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => deletePDF(pdf.id)}
+                        className="hover:bg-red-50 hover:border-red-300 hover:text-red-700"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

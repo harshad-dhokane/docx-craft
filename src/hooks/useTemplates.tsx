@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
 
 export interface Template {
   id: string;
@@ -169,10 +170,42 @@ export function useTemplates() {
     }) => {
       if (!user) throw new Error('User not authenticated');
 
-      // For now, we'll create a simple PDF placeholder
-      // In a real implementation, you would process the DOCX with the placeholder data
-      const pdfContent = `PDF generated from template with data: ${JSON.stringify(placeholderData)}`;
-      const pdfBlob = new Blob([pdfContent], { type: 'application/pdf' });
+      // Create a proper PDF using jsPDF
+      const pdf = new jsPDF();
+      
+      // Add title
+      pdf.setFontSize(16);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Generated Document', 20, 20);
+      
+      // Add content
+      pdf.setFontSize(12);
+      pdf.setFont(undefined, 'normal');
+      
+      let yPosition = 40;
+      const lineHeight = 10;
+      const pageHeight = pdf.internal.pageSize.height;
+      
+      Object.entries(placeholderData).forEach(([key, value]) => {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+        
+        // Add field label
+        pdf.setFont(undefined, 'bold');
+        pdf.text(`${key.replace(/[_-]/g, ' ')}:`, 20, yPosition);
+        
+        // Add field value
+        pdf.setFont(undefined, 'normal');
+        const splitValue = pdf.splitTextToSize(value || 'Not provided', 160);
+        pdf.text(splitValue, 20, yPosition + 6);
+        
+        yPosition += lineHeight + (splitValue.length - 1) * 6;
+      });
+      
+      // Convert PDF to blob
+      const pdfBlob = pdf.output('blob');
       
       const fileName = `${user.id}/${Date.now()}-${pdfName}.pdf`;
 

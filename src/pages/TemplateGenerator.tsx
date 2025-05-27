@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, FileText, Download } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import FieldTypeSelector from "@/components/form/FieldTypeSelector";
+import DocumentPreview from "@/components/preview/DocumentPreview";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useToast } from "@/hooks/use-toast";
 
@@ -45,20 +46,6 @@ const TemplateGenerator = () => {
   const handleGenerate = async () => {
     if (!template || !templateId) return;
 
-    // Validate that all placeholders are filled
-    const emptyPlaceholders = template.placeholders?.filter(
-      (placeholder: string) => !placeholderData[placeholder]?.trim()
-    ) || [];
-
-    if (emptyPlaceholders.length > 0) {
-      toast({
-        title: "Missing Data",
-        description: `Please fill in all placeholders: ${emptyPlaceholders.join(', ')}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!pdfName.trim()) {
       toast({
         title: "Missing Name",
@@ -70,10 +57,6 @@ const TemplateGenerator = () => {
 
     try {
       await generatePDF({ templateId, placeholderData, pdfName });
-      toast({
-        title: "PDF Generated",
-        description: "Your PDF has been generated successfully!",
-      });
       navigate('/dashboard');
     } catch (error) {
       console.error('PDF generation failed:', error);
@@ -83,14 +66,16 @@ const TemplateGenerator = () => {
   if (!template) {
     return (
       <DashboardLayout>
-        <div className="p-6">
+        <div className="p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
           <div className="text-center py-12">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Template not found</h3>
-            <p className="text-gray-600 mb-4">
+            <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+              <FileText className="h-10 w-10 text-gray-400" />
+            </div>
+            <h3 className="text-xl font-medium text-gray-900 mb-2">Template not found</h3>
+            <p className="text-gray-600 mb-6">
               The template you're looking for doesn't exist or has been deleted.
             </p>
-            <Button onClick={() => navigate('/templates')}>
+            <Button onClick={() => navigate('/templates')} className="bg-gradient-to-r from-blue-600 to-blue-700">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Templates
             </Button>
@@ -102,11 +87,12 @@ const TemplateGenerator = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
         <div className="flex items-center space-x-4">
           <Button
             variant="outline"
             onClick={() => navigate('/templates')}
+            className="hover:bg-white/80"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
@@ -119,42 +105,43 @@ const TemplateGenerator = () => {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Template Info */}
-          <div className="lg:col-span-1">
-            <Card>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Left Side - Form */}
+          <div className="space-y-6">
+            {/* Template Info */}
+            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <FileText className="h-5 w-5" />
+                  <FileText className="h-5 w-5 text-blue-600" />
                   <span>Template Info</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <Label className="text-xs text-gray-500">Name</Label>
-                  <p className="font-medium">{template.name}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">Upload Date</Label>
-                  <p className="text-sm">{new Date(template.upload_date).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">File Size</Label>
-                  <p className="text-sm">
-                    {template.file_size ? (template.file_size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown'}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">Placeholders</Label>
-                  <p className="text-sm">{template.placeholders?.length || 0} fields</p>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Name</Label>
+                    <p className="font-medium mt-1">{template.name}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Upload Date</Label>
+                    <p className="text-sm mt-1">{new Date(template.upload_date).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500 uppercase tracking-wide">File Size</Label>
+                    <p className="text-sm mt-1">
+                      {template.file_size ? (template.file_size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Fields</Label>
+                    <p className="text-sm mt-1">{template.placeholders?.length || 0} placeholders</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Form */}
-          <div className="lg:col-span-2">
-            <Card>
+            {/* Form */}
+            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle>Fill Template Data</CardTitle>
                 <CardDescription>
@@ -164,7 +151,7 @@ const TemplateGenerator = () => {
               <CardContent className="space-y-6">
                 {/* PDF Name */}
                 <div>
-                  <Label htmlFor="pdf-name">PDF Name</Label>
+                  <Label htmlFor="pdf-name" className="text-sm font-medium text-gray-700">PDF Name</Label>
                   <Input
                     id="pdf-name"
                     value={pdfName}
@@ -176,26 +163,20 @@ const TemplateGenerator = () => {
 
                 {/* Placeholders */}
                 {template.placeholders && template.placeholders.length > 0 ? (
-                  <div className="space-y-4">
-                    <Label className="text-base font-medium">Template Fields</Label>
+                  <div className="space-y-6">
+                    <Label className="text-base font-medium text-gray-900">Template Fields</Label>
                     {template.placeholders.map((placeholder: string) => (
-                      <div key={placeholder}>
-                        <Label htmlFor={placeholder} className="capitalize">
-                          {placeholder.replace(/[_-]/g, ' ')}
-                        </Label>
-                        <Textarea
-                          id={placeholder}
-                          value={placeholderData[placeholder] || ""}
-                          onChange={(e) => handleInputChange(placeholder, e.target.value)}
-                          placeholder={`Enter value for ${placeholder}`}
-                          className="mt-1"
-                          rows={3}
-                        />
-                      </div>
+                      <FieldTypeSelector
+                        key={placeholder}
+                        placeholder={placeholder}
+                        value={placeholderData[placeholder] || ""}
+                        onChange={(value) => handleInputChange(placeholder, value)}
+                      />
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-8">
+                    <FileText className="h-12 w-12 text-gray-300 mx-auto mb-2" />
                     <p className="text-gray-500">No placeholders found in this template</p>
                   </div>
                 )}
@@ -203,7 +184,7 @@ const TemplateGenerator = () => {
                 <Button
                   onClick={handleGenerate}
                   disabled={isGenerating}
-                  className="w-full"
+                  className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg"
                   size="lg"
                 >
                   {isGenerating ? (
@@ -220,6 +201,15 @@ const TemplateGenerator = () => {
                 </Button>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Right Side - Live Preview */}
+          <div className="lg:sticky lg:top-6">
+            <DocumentPreview
+              templateName={template.name}
+              placeholderData={placeholderData}
+              placeholders={template.placeholders || []}
+            />
           </div>
         </div>
       </div>
