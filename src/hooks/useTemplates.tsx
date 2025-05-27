@@ -15,6 +15,39 @@ export interface Template {
   use_count: number;
 }
 
+// Function to extract placeholders from DOCX content
+const extractPlaceholders = async (file: File): Promise<string[]> => {
+  try {
+    const JSZip = (await import('jszip')).default;
+    const zip = new JSZip();
+    const zipFile = await zip.loadAsync(file);
+    
+    // Get document.xml which contains the main content
+    const documentXml = await zipFile.file('word/document.xml')?.async('text');
+    
+    if (!documentXml) {
+      return [];
+    }
+    
+    // Extract placeholders using regex (looking for {{placeholder}} format)
+    const placeholderRegex = /\{\{([^}]+)\}\}/g;
+    const placeholders: string[] = [];
+    let match;
+    
+    while ((match = placeholderRegex.exec(documentXml)) !== null) {
+      const placeholder = match[1].trim();
+      if (!placeholders.includes(placeholder)) {
+        placeholders.push(placeholder);
+      }
+    }
+    
+    return placeholders;
+  } catch (error) {
+    console.error('Error extracting placeholders:', error);
+    return [];
+  }
+};
+
 export function useTemplates() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -38,8 +71,11 @@ export function useTemplates() {
   });
 
   const uploadMutation = useMutation({
-    mutationFn: async ({ file, placeholders }: { file: File; placeholders: string[] }) => {
+    mutationFn: async (file: File) => {
       if (!user) throw new Error('User not authenticated');
+
+      // Extract placeholders from the DOCX file
+      const placeholders = await extractPlaceholders(file);
 
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
@@ -125,12 +161,74 @@ export function useTemplates() {
     },
   });
 
+  const generatePDFMutation = useMutation({
+    mutationFn: async ({ templateId, placeholderData, pdfName }: {
+      templateId: string;
+      placeholderData: Record<string, string>;
+      pdfName: string;
+    }) => {
+      if (!user) throw new Error('User not authenticated');
+
+      // For now, we'll create a simple PDF placeholder
+      // In a real implementation, you would process the DOCX with the placeholder data
+      const pdfContent = `PDF generated from template with data: ${JSON.stringify(placeholderData)}`;
+      const pdfBlob = new Blob([pdfContent], { type: 'application/pdf' });
+      
+      const fileName = `${user.id}/${Date.now()}-${pdfName}.pdf`;
+
+      // Upload PDF to storage
+      const { error: uploadError } = await supabase.storage
+        .from('generated-pdfs')
+        .upload(fileName, pdfBlob);
+
+      if (uploadError) throw uploadError;
+
+      // Save PDF metadata
+      const { data, error } = await supabase
+        .from('generated_pdfs')
+        .insert({
+          user_id: user.id,
+          template_id: templateId,
+          name: pdfName,
+          file_path: fileName,
+          file_size: pdfBlob.size,
+          placeholder_data: placeholderData,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update template use count
+      await supabase.rpc('increment_template_use_count', { template_id: templateId });
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['templates', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['generated-pdfs', user?.id] });
+      toast({
+        title: "PDF Generated",
+        description: "Your PDF has been generated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Generation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     templates,
     isLoading,
     uploadTemplate: uploadMutation.mutate,
     deleteTemplate: deleteMutation.mutate,
+    generatePDF: generatePDFMutation.mutate,
     isUploading: uploadMutation.isPending,
     isDeleting: deleteMutation.isPending,
+    isGenerating: generatePDFMutation.isPending,
   };
 }

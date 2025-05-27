@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +35,7 @@ const Templates = () => {
     
     setUploadLoading(true);
     try {
-      await uploadTemplate(selectedFile);
+      uploadTemplate(selectedFile);
       setSelectedFile(null);
       // Reset file input
       const fileInput = document.getElementById('file-upload') as HTMLInputElement;
