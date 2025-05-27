@@ -9,7 +9,80 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      generated_pdfs: {
+        Row: {
+          file_path: string
+          file_size: number | null
+          generated_date: string
+          id: string
+          name: string
+          placeholder_data: Json | null
+          template_id: string
+          user_id: string
+        }
+        Insert: {
+          file_path: string
+          file_size?: number | null
+          generated_date?: string
+          id?: string
+          name: string
+          placeholder_data?: Json | null
+          template_id: string
+          user_id: string
+        }
+        Update: {
+          file_path?: string
+          file_size?: number | null
+          generated_date?: string
+          id?: string
+          name?: string
+          placeholder_data?: Json | null
+          template_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_pdfs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      templates: {
+        Row: {
+          file_path: string
+          file_size: number | null
+          id: string
+          name: string
+          placeholders: Json | null
+          upload_date: string
+          use_count: number | null
+          user_id: string
+        }
+        Insert: {
+          file_path: string
+          file_size?: number | null
+          id?: string
+          name: string
+          placeholders?: Json | null
+          upload_date?: string
+          use_count?: number | null
+          user_id: string
+        }
+        Update: {
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          name?: string
+          placeholders?: Json | null
+          upload_date?: string
+          use_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -1,82 +1,173 @@
 
-import { useState } from "react";
-import LoginForm from "@/components/auth/LoginForm";
-import SignupForm from "@/components/auth/SignupForm";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Zap, Shield, Users } from "lucide-react";
+import { FileText, Upload, Download, Zap, ArrowRight } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    if (user) {
+      navigate("/dashboard");
+    } else {
+      navigate("/auth");
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <FileText className="h-8 w-8 text-blue-600" />
-            <h1 className="text-2xl font-bold text-gray-900">DocCraft PDF</h1>
-          </div>
+      <header className="container mx-auto px-4 py-6 flex justify-between items-center">
+        <div className="flex items-center space-x-2">
+          <FileText className="h-8 w-8 text-blue-600" />
+          <span className="text-2xl font-bold text-gray-900">DocCraft PDF</span>
+        </div>
+        <div className="space-x-4">
+          {user ? (
+            <Button onClick={() => navigate("/dashboard")}>
+              Go to Dashboard
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={() => navigate("/auth")}>
+                Sign In
+              </Button>
+              <Button onClick={() => navigate("/auth")}>
+                Get Started
+              </Button>
+            </>
+          )}
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto text-center max-w-4xl">
-          <h2 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
-            Transform Your <span className="text-blue-600">Documents</span> Into 
-            <br />Professional PDFs
+      <section className="container mx-auto px-4 py-20 text-center">
+        <h1 className="text-5xl font-bold text-gray-900 mb-6">
+          Transform DOCX Templates into
+          <span className="text-blue-600 block">Professional PDFs</span>
+        </h1>
+        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+          Upload your .docx templates with placeholders, fill them with dynamic data, 
+          and generate beautiful PDFs instantly. Perfect for invoices, contracts, reports, and more.
+        </p>
+        <Button 
+          size="lg" 
+          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+          onClick={handleGetStarted}
+        >
+          Get Started Free
+          <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
+      </section>
+
+      {/* Features */}
+      <section className="container mx-auto px-4 py-16">
+        <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+          How It Works
+        </h2>
+        <div className="grid md:grid-cols-3 gap-8">
+          <Card className="text-center">
+            <CardHeader>
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Upload className="h-6 w-6 text-blue-600" />
+              </div>
+              <CardTitle>1. Upload Template</CardTitle>
+              <CardDescription>
+                Upload your .docx file with placeholders like {"{"}{"{"} CustomerName {"}"}{"}"} or {"{"}{"{"} InvoiceDate {"}"}{"}"}
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="text-center">
+            <CardHeader>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <FileText className="h-6 w-6 text-green-600" />
+              </div>
+              <CardTitle>2. Fill Data</CardTitle>
+              <CardDescription>
+                Our system automatically detects placeholders and creates a form for you to input your data
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="text-center">
+            <CardHeader>
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Download className="h-6 w-6 text-purple-600" />
+              </div>
+              <CardTitle>3. Generate PDF</CardTitle>
+              <CardDescription>
+                Get your professional PDF with all formatting preserved, ready for sharing or printing
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </section>
+
+      {/* Benefits */}
+      <section className="bg-white py-16">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+            Why Choose DocCraft PDF?
           </h2>
-          <p className="text-xl text-gray-600 mb-12 leading-relaxed">
-            Upload .docx templates, fill them with dynamic data, and generate beautiful PDFs 
-            while preserving your original formatting.
-          </p>
-
-          {/* Features Grid */}
-          <div className="grid md:grid-cols-3 gap-8 mb-16">
-            <div className="p-6 rounded-xl bg-white shadow-lg hover:shadow-xl transition-shadow">
-              <Zap className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Lightning Fast</h3>
-              <p className="text-gray-600">Generate PDFs in seconds with our optimized conversion engine</p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="text-center">
+              <Zap className="h-8 w-8 text-blue-600 mx-auto mb-4" />
+              <h3 className="font-semibold text-gray-900 mb-2">Lightning Fast</h3>
+              <p className="text-gray-600 text-sm">Generate PDFs in seconds, not minutes</p>
             </div>
-            <div className="p-6 rounded-xl bg-white shadow-lg hover:shadow-xl transition-shadow">
-              <Shield className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Secure & Private</h3>
-              <p className="text-gray-600">Your documents are encrypted and stored securely in the cloud</p>
+            <div className="text-center">
+              <FileText className="h-8 w-8 text-blue-600 mx-auto mb-4" />
+              <h3 className="font-semibold text-gray-900 mb-2">Format Preserved</h3>
+              <p className="text-gray-600 text-sm">Keep all your original formatting intact</p>
             </div>
-            <div className="p-6 rounded-xl bg-white shadow-lg hover:shadow-xl transition-shadow">
-              <Users className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Team Collaboration</h3>
-              <p className="text-gray-600">Share templates and collaborate with your team members</p>
+            <div className="text-center">
+              <Upload className="h-8 w-8 text-blue-600 mx-auto mb-4" />
+              <h3 className="font-semibold text-gray-900 mb-2">Easy Upload</h3>
+              <p className="text-gray-600 text-sm">Simple drag-and-drop interface</p>
             </div>
-          </div>
-
-          {/* Auth Forms */}
-          <div className="max-w-md mx-auto">
-            <Card className="shadow-2xl border-0">
-              <CardHeader className="text-center pb-4">
-                <CardTitle className="text-2xl">Get Started</CardTitle>
-                <CardDescription>
-                  Create an account or sign in to start generating PDFs
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="login" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="login">Sign In</TabsTrigger>
-                    <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="login" className="mt-6">
-                    <LoginForm />
-                  </TabsContent>
-                  <TabsContent value="signup" className="mt-6">
-                    <SignupForm />
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
+            <div className="text-center">
+              <Download className="h-8 w-8 text-blue-600 mx-auto mb-4" />
+              <h3 className="font-semibold text-gray-900 mb-2">Secure Storage</h3>
+              <p className="text-gray-600 text-sm">Your files are safely stored and organized</p>
+            </div>
           </div>
         </div>
       </section>
+
+      {/* CTA */}
+      <section className="container mx-auto px-4 py-20 text-center">
+        <h2 className="text-3xl font-bold text-gray-900 mb-6">
+          Ready to Start Creating?
+        </h2>
+        <p className="text-xl text-gray-600 mb-8">
+          Join thousands of users who trust DocCraft PDF for their document needs
+        </p>
+        <Button 
+          size="lg" 
+          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+          onClick={handleGetStarted}
+        >
+          Start Creating PDFs Now
+          <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="container mx-auto px-4 text-center">
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            <FileText className="h-6 w-6" />
+            <span className="text-xl font-bold">DocCraft PDF</span>
+          </div>
+          <p className="text-gray-400">
+            Transform your documents with ease and precision
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };

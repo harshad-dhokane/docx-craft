@@ -12,6 +12,7 @@ import {
   User
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -19,6 +20,7 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, signOut } = useAuth();
 
   const navigation = [
     { name: "Dashboard", icon: Home, href: "/dashboard", current: true },
@@ -27,10 +29,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { name: "Settings", icon: Settings, href: "/settings", current: false },
   ];
 
-  const handleLogout = () => {
-    // TODO: Implement Supabase logout
-    console.log("Logout user");
-    window.location.href = "/";
+  const handleLogout = async () => {
+    await signOut();
   };
 
   return (
@@ -96,8 +96,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 <User className="h-5 w-5 text-gray-600" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-900">John Doe</p>
-                <p className="text-xs text-gray-500">john@example.com</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {user?.user_metadata?.name || user?.email}
+                </p>
+                <p className="text-xs text-gray-500">{user?.email}</p>
               </div>
             </div>
             <Button

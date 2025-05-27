@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, UserPlus } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const signupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -26,6 +27,7 @@ const SignupForm = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { signUp } = useAuth();
 
   const {
     register,
@@ -38,16 +40,24 @@ const SignupForm = () => {
   const onSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
     try {
-      // TODO: Implement Supabase user registration
-      console.log("Signup attempt:", data);
-      toast({
-        title: "Account Created",
-        description: "Welcome to DocCraft PDF! Please check your email to verify your account.",
-      });
+      const { error } = await signUp(data.email, data.password, data.name);
+      
+      if (error) {
+        toast({
+          title: "Signup Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Account Created",
+          description: "Welcome to DocCraft PDF! Please check your email to verify your account.",
+        });
+      }
     } catch (error) {
       toast({
         title: "Signup Failed",
-        description: "There was an error creating your account. Please try again.",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
