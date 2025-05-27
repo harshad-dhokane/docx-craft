@@ -69,7 +69,7 @@ const TemplateGenerator = () => {
     }
 
     try {
-      await generatePDF(templateId, placeholderData, pdfName);
+      await generatePDF({ templateId, placeholderData, pdfName });
       toast({
         title: "PDF Generated",
         description: "Your PDF has been generated successfully!",
