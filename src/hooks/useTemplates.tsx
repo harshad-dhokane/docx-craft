@@ -199,8 +199,19 @@ export function useTemplates() {
 
       if (error) throw error;
 
-      // Update template use count
-      await supabase.rpc('increment_template_use_count', { template_id: templateId });
+      // Update template use count manually since RPC might not be available
+      const { data: template } = await supabase
+        .from('templates')
+        .select('use_count')
+        .eq('id', templateId)
+        .single();
+
+      if (template) {
+        await supabase
+          .from('templates')
+          .update({ use_count: (template.use_count || 0) + 1 })
+          .eq('id', templateId);
+      }
 
       return data;
     },
