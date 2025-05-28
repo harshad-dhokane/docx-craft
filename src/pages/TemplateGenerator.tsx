@@ -7,15 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, FileText, Download } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import FieldTypeSelector from "@/components/form/FieldTypeSelector";
-import DocumentPreview from "@/components/preview/DocumentPreview";
+import EnhancedFieldTypeSelector from "@/components/form/EnhancedFieldTypeSelector";
+import RealDocumentPreview from "@/components/preview/RealDocumentPreview";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useToast } from "@/hooks/use-toast";
+import { generateEnhancedPDF } from "@/utils/enhancedPdfGenerator";
 
 const TemplateGenerator = () => {
   const { templateId } = useParams<{ templateId: string }>();
   const navigate = useNavigate();
-  const { templates, generatePDF, isGenerating } = useTemplates();
+  const { templates, isGenerating } = useTemplates();
   const { toast } = useToast();
   const [placeholderData, setPlaceholderData] = useState<Record<string, string>>({});
   const [pdfName, setPdfName] = useState("");
@@ -43,7 +44,7 @@ const TemplateGenerator = () => {
     }));
   };
 
-  const handleGenerate = async () => {
+  const handleGenerateEnhancedPDF = async () => {
     if (!template || !templateId) return;
 
     if (!pdfName.trim()) {
@@ -56,10 +57,36 @@ const TemplateGenerator = () => {
     }
 
     try {
-      await generatePDF({ templateId, placeholderData, pdfName });
+      // Generate PDF using enhanced generator
+      const pdfBlob = generateEnhancedPDF({
+        templateName: template.name,
+        placeholderData,
+        placeholders: template.placeholders || []
+      });
+
+      // Download the PDF
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${pdfName}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "PDF Generated",
+        description: "Your PDF has been generated and downloaded successfully.",
+      });
+      
       navigate('/dashboard');
     } catch (error) {
       console.error('PDF generation failed:', error);
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -98,29 +125,29 @@ const TemplateGenerator = () => {
             Back
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Generate PDF</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Generate Document</h1>
             <p className="text-gray-600 mt-1">
               Fill in the template data for "{template.name}"
             </p>
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-5">
           {/* Left Side - Form */}
-          <div className="space-y-6">
+          <div className="space-y-6 lg:col-span-1 xl:col-span-2">
             {/* Template Info */}
             <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-              <CardHeader>
+              <CardHeader className="pb-4">
                 <CardTitle className="flex items-center space-x-2">
                   <FileText className="h-5 w-5 text-blue-600" />
-                  <span>Template Info</span>
+                  <span>Template Information</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Name</Label>
-                    <p className="font-medium mt-1">{template.name}</p>
+                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Template Name</Label>
+                    <p className="font-medium mt-1 text-sm">{template.name}</p>
                   </div>
                   <div>
                     <Label className="text-xs text-gray-500 uppercase tracking-wide">Upload Date</Label>
@@ -142,37 +169,39 @@ const TemplateGenerator = () => {
 
             {/* Form */}
             <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle>Fill Template Data</CardTitle>
+              <CardHeader className="pb-4">
+                <CardTitle>Document Data</CardTitle>
                 <CardDescription>
-                  Enter values for each placeholder in your template
+                  Enter values for each field in your template
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* PDF Name */}
                 <div>
-                  <Label htmlFor="pdf-name" className="text-sm font-medium text-gray-700">PDF Name</Label>
+                  <Label htmlFor="pdf-name" className="text-sm font-semibold text-gray-700">Document Name</Label>
                   <Input
                     id="pdf-name"
                     value={pdfName}
                     onChange={(e) => setPdfName(e.target.value)}
-                    placeholder="Enter name for generated PDF"
-                    className="mt-1"
+                    placeholder="Enter name for generated document"
+                    className="mt-2"
                   />
                 </div>
 
                 {/* Placeholders */}
                 {template.placeholders && template.placeholders.length > 0 ? (
-                  <div className="space-y-6">
-                    <Label className="text-base font-medium text-gray-900">Template Fields</Label>
-                    {template.placeholders.map((placeholder: string) => (
-                      <FieldTypeSelector
-                        key={placeholder}
-                        placeholder={placeholder}
-                        value={placeholderData[placeholder] || ""}
-                        onChange={(value) => handleInputChange(placeholder, value)}
-                      />
-                    ))}
+                  <div className="space-y-4">
+                    <Label className="text-base font-semibold text-gray-900">Template Fields</Label>
+                    <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                      {template.placeholders.map((placeholder: string) => (
+                        <EnhancedFieldTypeSelector
+                          key={placeholder}
+                          placeholder={placeholder}
+                          value={placeholderData[placeholder] || ""}
+                          onChange={(value) => handleInputChange(placeholder, value)}
+                        />
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-8">
@@ -182,7 +211,7 @@ const TemplateGenerator = () => {
                 )}
 
                 <Button
-                  onClick={handleGenerate}
+                  onClick={handleGenerateEnhancedPDF}
                   disabled={isGenerating}
                   className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg"
                   size="lg"
@@ -190,12 +219,12 @@ const TemplateGenerator = () => {
                   {isGenerating ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Generating PDF...
+                      Generating Document...
                     </>
                   ) : (
                     <>
                       <Download className="h-4 w-4 mr-2" />
-                      Generate PDF
+                      Generate & Download PDF
                     </>
                   )}
                 </Button>
@@ -204,12 +233,14 @@ const TemplateGenerator = () => {
           </div>
 
           {/* Right Side - Live Preview */}
-          <div className="lg:sticky lg:top-6">
-            <DocumentPreview
-              templateName={template.name}
-              placeholderData={placeholderData}
-              placeholders={template.placeholders || []}
-            />
+          <div className="lg:col-span-1 xl:col-span-3">
+            <div className="sticky top-6">
+              <RealDocumentPreview
+                templateName={template.name}
+                placeholderData={placeholderData}
+                placeholders={template.placeholders || []}
+              />
+            </div>
           </div>
         </div>
       </div>
