@@ -1,3 +1,4 @@
+
 import { FileText, Home, Settings, User, LogOut, Activity, BarChart3, Download } from "lucide-react";
 import {
   Sidebar,
@@ -65,17 +66,7 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       
-      <SidebarContent className="px-4 overflow-y-auto scrollbar-hide">
-        <style jsx>{`
-          .scrollbar-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-          }
-          .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-          }
-        `}</style>
-        
+      <SidebarContent className="px-4 overflow-y-auto scrollbar-none">
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
             Main Menu
