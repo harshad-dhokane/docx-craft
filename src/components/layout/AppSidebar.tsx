@@ -1,5 +1,4 @@
-
-import { FileText, Home, Upload, Settings, User, LogOut, Activity, BarChart3 } from "lucide-react";
+import { FileText, Home, Settings, User, LogOut, Activity, BarChart3, Download } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -22,7 +21,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 const navigation = [
   { name: "Dashboard", icon: Home, href: "/dashboard" },
   { name: "Templates", icon: FileText, href: "/templates" },
-  { name: "Upload", icon: Upload, href: "/templates" },
+  { name: "Generated PDFs", icon: Download, href: "/generated-pdfs" },
 ];
 
 const secondaryNavigation = [
@@ -66,7 +65,17 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       
-      <SidebarContent className="px-4">
+      <SidebarContent className="px-4 overflow-y-auto scrollbar-hide">
+        <style jsx>{`
+          .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+        
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
             Main Menu

@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +11,9 @@ import Templates from "./pages/Templates";
 import TemplateGenerator from "./pages/TemplateGenerator";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import Analytics from "./pages/Analytics";
+import Activity from "./pages/Activity";
+import GeneratedPDFs from "./pages/GeneratedPDFs";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +39,30 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Templates />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/generated-pdfs" 
+              element={
+                <ProtectedRoute>
+                  <GeneratedPDFs />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/analytics" 
+              element={
+                <ProtectedRoute>
+                  <Analytics />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/activity" 
+              element={
+                <ProtectedRoute>
+                  <Activity />
                 </ProtectedRoute>
               } 
             />

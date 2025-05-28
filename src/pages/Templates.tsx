@@ -63,14 +63,10 @@ const Templates = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Templates</h1>
-            <p className="text-gray-600 mt-1">
-              Upload and manage your DOCX templates
-            </p>
-          </div>
+      <div className="p-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Templates</h1>
+          <p className="text-gray-600">Create and manage your document templates for PDF generation.</p>
         </div>
 
         {/* Upload Section */}
