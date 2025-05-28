@@ -13,8 +13,13 @@ const Index = () => {
     if (user) {
       navigate("/dashboard");
     } else {
-      navigate("/auth");
+      // Navigate to protected route which will show auth page
+      navigate("/dashboard");
     }
+  };
+
+  const handleSignIn = () => {
+    navigate("/dashboard"); // This will redirect to auth page if not logged in
   };
 
   return (
@@ -32,10 +37,10 @@ const Index = () => {
             </Button>
           ) : (
             <>
-              <Button variant="ghost" onClick={() => navigate("/auth")}>
+              <Button variant="ghost" onClick={handleSignIn}>
                 Sign In
               </Button>
-              <Button onClick={() => navigate("/auth")}>
+              <Button onClick={handleGetStarted}>
                 Get Started
               </Button>
             </>

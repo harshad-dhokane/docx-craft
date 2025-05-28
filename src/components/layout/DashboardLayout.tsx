@@ -1,5 +1,5 @@
 
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 
 interface DashboardLayoutProps {
@@ -8,19 +8,11 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+    <SidebarProvider defaultOpen={true}>
+      <div className="min-h-screen flex w-full bg-gray-50">
         <AppSidebar />
-        <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-            <SidebarTrigger className="-ml-1" />
-            <div className="ml-auto">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">Welcome back!</span>
-              </div>
-            </div>
-          </header>
-          <main className="flex-1 overflow-auto">
+        <SidebarInset className="flex-1">
+          <main className="flex-1 overflow-auto bg-gradient-to-br from-slate-50 to-blue-50">
             {children}
           </main>
         </SidebarInset>
