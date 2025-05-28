@@ -3,7 +3,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, FileText, Trash2, Eye, Calendar, HardDrive } from "lucide-react";
+import { Download, FileText, Trash2, Calendar, HardDrive, Activity, TrendingUp } from "lucide-react";
 import { useGeneratedPDFs } from "@/hooks/useGeneratedPDFs";
 import { formatDistanceToNow } from "date-fns";
 
@@ -17,10 +17,41 @@ const GeneratedPDFs = () => {
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
 
+  const totalSize = generatedPDFs.reduce((acc, pdf) => acc + (pdf.file_size || 0), 0);
+  const recentPDFs = generatedPDFs.filter(pdf => {
+    const genDate = new Date(pdf.generated_date);
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    return genDate > weekAgo;
+  }).length;
+
+  const stats = [
+    {
+      title: "Total PDFs",
+      value: generatedPDFs.length.toString(),
+      description: "Generated documents",
+      icon: FileText,
+      color: "bg-blue-500",
+    },
+    {
+      title: "Storage Used",
+      value: formatFileSize(totalSize),
+      description: "Total file size",
+      icon: HardDrive,
+      color: "bg-green-500",
+    },
+    {
+      title: "This Week",
+      value: recentPDFs.toString(),
+      description: "Recently generated",
+      icon: TrendingUp,
+      color: "bg-purple-500",
+    },
+  ];
+
   if (isLoading) {
     return (
       <DashboardLayout>
-        <div className="p-8">
+        <div className="py-6 lg:py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -34,30 +65,52 @@ const GeneratedPDFs = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Generated PDFs</h1>
-          <p className="text-gray-600">View and manage all your generated PDF documents.</p>
+      <div className="py-6 lg:py-8">
+        <div className="mb-6 lg:mb-8">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Generated PDFs</h1>
+          <p className="text-gray-600 text-sm lg:text-base">View and manage all your generated PDF documents.</p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
+          {stats.map((stat, index) => (
+            <Card key={index} className="hover:shadow-lg transition-all duration-200 border-0 shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  {stat.title}
+                </CardTitle>
+                <div className={`p-2 ${stat.color} rounded-lg`}>
+                  <stat.icon className="h-4 w-4 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-lg lg:text-2xl font-bold text-gray-900">{stat.value}</div>
+                <p className="text-xs text-gray-500 mt-1">{stat.description}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {generatedPDFs.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <Card className="border-0 shadow-lg">
+            <CardContent className="text-center py-12 lg:py-16">
+              <div className="mb-4">
+                <FileText className="h-16 w-16 text-gray-300 mx-auto" />
+              </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No PDFs Generated Yet</h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
                 You haven't generated any PDF documents yet. Start by creating a document from one of your templates.
               </p>
-              <Button asChild>
+              <Button asChild className="bg-blue-600 hover:bg-blue-700">
                 <a href="/templates">Browse Templates</a>
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
             {generatedPDFs.map((pdf) => (
-              <Card key={pdf.id} className="hover:shadow-lg transition-shadow duration-200">
-                <CardHeader className="pb-3">
+              <Card key={pdf.id} className="hover:shadow-xl transition-all duration-300 border-0 shadow-md group">
+                <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-lg pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-lg font-semibold text-gray-900 truncate">
@@ -67,21 +120,21 @@ const GeneratedPDFs = () => {
                         From: {pdf.template_name}
                       </p>
                     </div>
-                    <Badge variant="secondary" className="ml-2">
+                    <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-700">
                       PDF
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                <CardContent className="p-4 lg:p-6 space-y-4">
+                  <div className="grid grid-cols-1 gap-3 text-sm">
                     <div className="flex items-center text-gray-600">
-                      <Calendar className="h-4 w-4 mr-2" />
+                      <Calendar className="h-4 w-4 mr-2 text-blue-500" />
                       <span>
                         {formatDistanceToNow(new Date(pdf.generated_date), { addSuffix: true })}
                       </span>
                     </div>
                     <div className="flex items-center text-gray-600">
-                      <HardDrive className="h-4 w-4 mr-2" />
+                      <HardDrive className="h-4 w-4 mr-2 text-green-500" />
                       <span>{formatFileSize(pdf.file_size)}</span>
                     </div>
                   </div>
@@ -91,13 +144,13 @@ const GeneratedPDFs = () => {
                       <p className="text-xs font-medium text-gray-700 mb-2">Template Data:</p>
                       <div className="space-y-1 max-h-20 overflow-y-auto">
                         {Object.entries(pdf.placeholder_data).slice(0, 3).map(([key, value]) => (
-                          <div key={key} className="text-xs text-gray-600">
-                            <span className="font-medium">{key}:</span> {String(value).substring(0, 30)}
-                            {String(value).length > 30 && '...'}
+                          <div key={key} className="text-xs text-gray-600 bg-gray-50 rounded p-1">
+                            <span className="font-medium">{key}:</span> {String(value).substring(0, 25)}
+                            {String(value).length > 25 && '...'}
                           </div>
                         ))}
                         {Object.keys(pdf.placeholder_data).length > 3 && (
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 italic">
                             +{Object.keys(pdf.placeholder_data).length - 3} more fields
                           </p>
                         )}
@@ -108,7 +161,7 @@ const GeneratedPDFs = () => {
                   <div className="flex space-x-2 pt-2">
                     <Button 
                       size="sm" 
-                      className="flex-1"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
                       onClick={() => downloadPDF(pdf.id)}
                     >
                       <Download className="h-4 w-4 mr-2" />
@@ -117,6 +170,7 @@ const GeneratedPDFs = () => {
                     <Button 
                       size="sm" 
                       variant="outline"
+                      className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                       onClick={() => deletePDF(pdf.id)}
                     >
                       <Trash2 className="h-4 w-4" />
