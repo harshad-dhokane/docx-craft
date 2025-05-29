@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useActivity } from './useActivity';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 
@@ -51,6 +52,7 @@ const extractPlaceholders = async (file: File): Promise<string[]> => {
 
 export function useTemplates() {
   const { user } = useAuth();
+  const { logActivity } = useActivity();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -102,6 +104,15 @@ export function useTemplates() {
         .single();
 
       if (error) throw error;
+
+      // Log activity
+      logActivity({
+        action: 'Template Uploaded',
+        resource_type: 'template',
+        resource_id: data.id,
+        metadata: { name: file.name, placeholders: placeholders.length }
+      });
+
       return data;
     },
     onSuccess: () => {
@@ -127,7 +138,7 @@ export function useTemplates() {
       // Get template info
       const { data: template } = await supabase
         .from('templates')
-        .select('file_path')
+        .select('file_path, name')
         .eq('id', templateId)
         .single();
 
@@ -136,6 +147,14 @@ export function useTemplates() {
         await supabase.storage
           .from('templates')
           .remove([template.file_path]);
+
+        // Log activity
+        logActivity({
+          action: 'Template Deleted',
+          resource_type: 'template',
+          resource_id: templateId,
+          metadata: { name: template.name }
+        });
       }
 
       // Delete from database
@@ -232,10 +251,10 @@ export function useTemplates() {
 
       if (error) throw error;
 
-      // Update template use count manually since RPC might not be available
+      // Update template use count
       const { data: template } = await supabase
         .from('templates')
-        .select('use_count')
+        .select('use_count, name')
         .eq('id', templateId)
         .single();
 
@@ -244,6 +263,18 @@ export function useTemplates() {
           .from('templates')
           .update({ use_count: (template.use_count || 0) + 1 })
           .eq('id', templateId);
+
+        // Log activity
+        logActivity({
+          action: 'PDF Generated',
+          resource_type: 'generated_pdf',
+          resource_id: data.id,
+          metadata: { 
+            template_name: template.name,
+            pdf_name: pdfName,
+            placeholders_filled: Object.keys(placeholderData).length
+          }
+        });
       }
 
       return data;
@@ -251,6 +282,8 @@ export function useTemplates() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['generated-pdfs', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['analytics', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['activity-logs', user?.id] });
       toast({
         title: "PDF Generated",
         description: "Your PDF has been generated successfully.",

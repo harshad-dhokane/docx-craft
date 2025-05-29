@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import Analytics from "./pages/Analytics";
 import Activity from "./pages/Activity";
 import GeneratedPDFs from "./pages/GeneratedPDFs";
+import UserGuide from "./pages/UserGuide";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <GeneratedPDFs />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/user-guide" 
+              element={
+                <ProtectedRoute>
+                  <UserGuide />
                 </ProtectedRoute>
               } 
             />

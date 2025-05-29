@@ -1,5 +1,5 @@
 
-import { FileText, Home, Settings, User, LogOut, Activity, BarChart3, Download, ChevronDown } from "lucide-react";
+import { FileText, Home, Settings, User, LogOut, Activity, BarChart3, Download, ChevronDown, BookOpen } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,7 +14,7 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -23,12 +23,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfiles } from "@/hooks/useProfiles";
 import { Link, useLocation } from "react-router-dom";
 
 const navigation = [
   { name: "Dashboard", icon: Home, href: "/dashboard" },
   { name: "Templates", icon: FileText, href: "/templates" },
   { name: "Generated PDFs", icon: Download, href: "/generated-pdfs" },
+  { name: "User Guide", icon: BookOpen, href: "/user-guide" },
 ];
 
 const secondaryNavigation = [
@@ -39,6 +41,7 @@ const secondaryNavigation = [
 
 export function AppSidebar() {
   const { user, signOut } = useAuth();
+  const { profile } = useProfiles();
   const location = useLocation();
 
   const handleLogout = async () => {
@@ -53,8 +56,12 @@ export function AppSidebar() {
   const isActive = (href: string) => location.pathname === href;
 
   const getUserInitials = () => {
-    const name = user?.user_metadata?.name || user?.email || "";
+    const name = profile?.display_name || user?.user_metadata?.name || user?.email || "";
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  };
+
+  const getDisplayName = () => {
+    return profile?.display_name || user?.user_metadata?.name || "User";
   };
 
   return (
@@ -86,8 +93,8 @@ export function AppSidebar() {
                       isActive={isActive(item.href)}
                       className={`h-10 lg:h-11 rounded-lg transition-all duration-200 text-sm lg:text-base font-medium ${
                         isActive(item.href) 
-                          ? 'bg-blue-600 text-white shadow-md' 
-                          : 'hover:bg-blue-50 hover:text-blue-700 text-gray-700'
+                          ? 'bg-blue-600 text-white shadow-md border-blue-600' 
+                          : 'hover:bg-blue-50 hover:text-blue-700 text-gray-700 hover:border-blue-200'
                       }`}
                     >
                       <Link to={item.href} className="flex items-center space-x-3 px-3 lg:px-4">
@@ -116,8 +123,8 @@ export function AppSidebar() {
                       isActive={isActive(item.href)}
                       className={`h-10 lg:h-11 rounded-lg transition-all duration-200 text-sm lg:text-base font-medium ${
                         isActive(item.href) 
-                          ? 'bg-blue-600 text-white shadow-md' 
-                          : 'hover:bg-blue-50 hover:text-blue-700 text-gray-700'
+                          ? 'bg-blue-600 text-white shadow-md border-blue-600' 
+                          : 'hover:bg-blue-50 hover:text-blue-700 text-gray-700 hover:border-blue-200'
                       }`}
                     >
                       <Link to={item.href} className="flex items-center justify-between px-3 lg:px-4">
@@ -149,13 +156,16 @@ export function AppSidebar() {
               <Button variant="ghost" className="w-full h-auto p-0 justify-start hover:bg-transparent">
                 <div className="flex items-center space-x-3 w-full">
                   <Avatar className="h-8 w-8 lg:h-10 lg:w-10 bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg">
+                    {profile?.avatar_url && (
+                      <AvatarImage src={profile.avatar_url} alt={getDisplayName()} />
+                    )}
                     <AvatarFallback className="text-white text-xs lg:text-sm font-medium">
                       {getUserInitials()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0 text-left">
                     <p className="text-sm lg:text-base font-medium text-gray-900 truncate">
-                      {user?.user_metadata?.name || "User"}
+                      {getDisplayName()}
                     </p>
                     <p className="text-xs lg:text-sm text-gray-500 truncate">{user?.email}</p>
                   </div>

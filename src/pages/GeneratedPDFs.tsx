@@ -67,8 +67,8 @@ const GeneratedPDFs = () => {
     <DashboardLayout>
       <div className="py-6 lg:py-8">
         <div className="mb-6 lg:mb-8">
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Generated PDFs</h1>
-          <p className="text-gray-600 text-sm lg:text-base">View and manage all your generated PDF documents.</p>
+          <h1 className="page-title">Generated PDFs</h1>
+          <p className="page-subtitle mt-2">View and manage all your generated PDF documents.</p>
         </div>
 
         {/* Stats Cards */}
@@ -76,7 +76,7 @@ const GeneratedPDFs = () => {
           {stats.map((stat, index) => (
             <Card key={index} className="hover:shadow-lg transition-all duration-200 border-0 shadow-md">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
+                <CardTitle className="card-description">
                   {stat.title}
                 </CardTitle>
                 <div className={`p-2 ${stat.color} rounded-lg`}>
@@ -84,8 +84,8 @@ const GeneratedPDFs = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-lg lg:text-2xl font-bold text-gray-900">{stat.value}</div>
-                <p className="text-xs text-gray-500 mt-1">{stat.description}</p>
+                <div className="card-title">{stat.value}</div>
+                <p className="small-text mt-1">{stat.description}</p>
               </CardContent>
             </Card>
           ))}
@@ -97,8 +97,8 @@ const GeneratedPDFs = () => {
               <div className="mb-4">
                 <FileText className="h-16 w-16 text-gray-300 mx-auto" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No PDFs Generated Yet</h3>
-              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              <h3 className="section-title text-gray-900 mb-2">No PDFs Generated Yet</h3>
+              <p className="card-description mb-6 max-w-md mx-auto">
                 You haven't generated any PDF documents yet. Start by creating a document from one of your templates.
               </p>
               <Button asChild className="bg-blue-600 hover:bg-blue-700">
@@ -113,10 +113,10 @@ const GeneratedPDFs = () => {
                 <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-lg pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg font-semibold text-gray-900 truncate">
+                      <CardTitle className="card-title truncate">
                         {pdf.name}
                       </CardTitle>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="card-description mt-1">
                         From: {pdf.template_name}
                       </p>
                     </div>
@@ -129,28 +129,28 @@ const GeneratedPDFs = () => {
                   <div className="grid grid-cols-1 gap-3 text-sm">
                     <div className="flex items-center text-gray-600">
                       <Calendar className="h-4 w-4 mr-2 text-blue-500" />
-                      <span>
+                      <span className="body-text">
                         {formatDistanceToNow(new Date(pdf.generated_date), { addSuffix: true })}
                       </span>
                     </div>
                     <div className="flex items-center text-gray-600">
                       <HardDrive className="h-4 w-4 mr-2 text-green-500" />
-                      <span>{formatFileSize(pdf.file_size)}</span>
+                      <span className="body-text">{formatFileSize(pdf.file_size)}</span>
                     </div>
                   </div>
                   
                   {pdf.placeholder_data && Object.keys(pdf.placeholder_data).length > 0 && (
                     <div className="border-t pt-3">
-                      <p className="text-xs font-medium text-gray-700 mb-2">Template Data:</p>
+                      <p className="small-text font-medium text-gray-700 mb-2">Template Data:</p>
                       <div className="space-y-1 max-h-20 overflow-y-auto">
                         {Object.entries(pdf.placeholder_data).slice(0, 3).map(([key, value]) => (
-                          <div key={key} className="text-xs text-gray-600 bg-gray-50 rounded p-1">
+                          <div key={key} className="small-text text-gray-600 bg-gray-50 rounded p-1">
                             <span className="font-medium">{key}:</span> {String(value).substring(0, 25)}
                             {String(value).length > 25 && '...'}
                           </div>
                         ))}
                         {Object.keys(pdf.placeholder_data).length > 3 && (
-                          <p className="text-xs text-gray-500 italic">
+                          <p className="small-text text-gray-500 italic">
                             +{Object.keys(pdf.placeholder_data).length - 3} more fields
                           </p>
                         )}

@@ -7,14 +7,19 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
-import { User, Bell, Shield, Download, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useProfiles } from "@/hooks/useProfiles";
+import { User, Bell, Shield, Download, Trash2, Upload, Camera } from "lucide-react";
+import { useState, useRef } from "react";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
+  const { profile, updateProfile, uploadAvatar, isUpdating, isUploading } = useProfiles();
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
+  const [displayName, setDisplayName] = useState(profile?.display_name || "");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSignOut = async () => {
     try {
@@ -24,16 +29,40 @@ const Settings = () => {
     }
   };
 
+  const handleUpdateProfile = () => {
+    updateProfile({ display_name: displayName });
+  };
+
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        alert('File size must be less than 5MB');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      uploadAvatar(file);
+    }
+  };
+
+  const getUserInitials = () => {
+    const name = profile?.display_name || user?.user_metadata?.name || user?.email || "";
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  };
+
   return (
     <DashboardLayout>
-      <div className="p-8 space-y-8 bg-gradient-to-br from-slate-50 to-blue-50 min-h-full">
+      <div className="py-6 lg:py-8">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
-          <p className="text-gray-600">Manage your account preferences and application settings</p>
+        <div className="mb-6 lg:mb-8">
+          <h1 className="page-title">Settings</h1>
+          <p className="page-subtitle mt-2">Manage your account preferences and application settings</p>
         </div>
 
-        <div className="grid gap-8 max-w-4xl">
+        <div className="grid gap-6 lg:gap-8 max-w-4xl">
           {/* Profile Settings */}
           <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
             <CardHeader>
@@ -42,23 +71,63 @@ const Settings = () => {
                   <User className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <CardTitle>Profile Information</CardTitle>
+                  <CardTitle className="section-title">Profile Information</CardTitle>
                   <CardDescription>Update your personal information and preferences</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Avatar Upload */}
+              <div className="flex items-center space-x-6">
+                <div className="relative">
+                  <Avatar className="h-20 w-20">
+                    {profile?.avatar_url && (
+                      <AvatarImage src={profile.avatar_url} alt="Profile" />
+                    )}
+                    <AvatarFallback className="text-lg font-semibold bg-gradient-to-br from-blue-600 to-blue-700 text-white">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                  />
+                </div>
+                <div>
+                  <h3 className="card-title">Profile Photo</h3>
+                  <p className="small-text text-gray-500">Click the camera icon to upload a new photo</p>
+                  <p className="small-text text-gray-400">JPG, PNG or GIF. Max size 5MB.</p>
+                </div>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Display Name</Label>
+                  <Label htmlFor="name" className="body-text">Display Name</Label>
                   <Input 
                     id="name" 
-                    defaultValue={user?.user_metadata?.name || ""} 
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="Enter your name"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
+                  <Label htmlFor="email" className="body-text">Email Address</Label>
                   <Input 
                     id="email" 
                     type="email" 
@@ -72,9 +141,16 @@ const Settings = () => {
                 <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
                   Verified
                 </Badge>
-                <span className="text-sm text-gray-500">Your email is verified</span>
+                <span className="small-text text-gray-500">Your email is verified</span>
               </div>
-              <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={handleUpdateProfile}
+                disabled={isUpdating}
+              >
+                {isUpdating ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                ) : null}
                 Update Profile
               </Button>
             </CardContent>
@@ -88,7 +164,7 @@ const Settings = () => {
                   <Bell className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <CardTitle>Notifications</CardTitle>
+                  <CardTitle className="section-title">Notifications</CardTitle>
                   <CardDescription>Configure how you receive notifications</CardDescription>
                 </div>
               </div>
@@ -96,8 +172,8 @@ const Settings = () => {
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <Label htmlFor="email-notifications">Email Notifications</Label>
-                  <p className="text-sm text-gray-500">Receive email updates about your documents</p>
+                  <Label htmlFor="email-notifications" className="body-text">Email Notifications</Label>
+                  <p className="small-text text-gray-500">Receive email updates about your documents</p>
                 </div>
                 <Switch 
                   id="email-notifications"
@@ -108,8 +184,8 @@ const Settings = () => {
               <Separator />
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <Label htmlFor="auto-save">Auto-save Templates</Label>
-                  <p className="text-sm text-gray-500">Automatically save your work</p>
+                  <Label htmlFor="auto-save" className="body-text">Auto-save Templates</Label>
+                  <p className="small-text text-gray-500">Automatically save your work</p>
                 </div>
                 <Switch 
                   id="auto-save"
@@ -128,7 +204,7 @@ const Settings = () => {
                   <Shield className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
-                  <CardTitle>Security</CardTitle>
+                  <CardTitle className="section-title">Security</CardTitle>
                   <CardDescription>Manage your account security settings</CardDescription>
                 </div>
               </div>
@@ -154,7 +230,7 @@ const Settings = () => {
                   <Download className="h-5 w-5 text-orange-600" />
                 </div>
                 <div>
-                  <CardTitle>Data Management</CardTitle>
+                  <CardTitle className="section-title">Data Management</CardTitle>
                   <CardDescription>Export or delete your data</CardDescription>
                 </div>
               </div>
@@ -176,8 +252,8 @@ const Settings = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-medium text-gray-900">Sign Out</h3>
-                  <p className="text-sm text-gray-500">Sign out of your account on this device</p>
+                  <h3 className="card-title text-gray-900">Sign Out</h3>
+                  <p className="small-text text-gray-500">Sign out of your account on this device</p>
                 </div>
                 <Button 
                   variant="outline" 
