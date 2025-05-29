@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +9,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import UploadTemplateDialog from "@/components/UploadTemplateDialog";
 
 const Templates = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -95,9 +95,17 @@ const Templates = () => {
   return (
     <DashboardLayout>
       <div className="py-6 lg:py-8">
-        <div className="mb-6 lg:mb-8">
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Templates</h1>
-          <p className="text-gray-600 text-sm lg:text-base">Create and manage your document templates for PDF generation.</p>
+        <div className="mb-6 lg:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">Templates</h1>
+            <p className="text-gray-600 text-sm lg:text-base">Create and manage your document templates for PDF generation.</p>
+          </div>
+          <UploadTemplateDialog>
+            <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg px-6 py-3 text-base">
+              <Plus className="h-5 w-5 mr-2" />
+              Upload New Template
+            </Button>
+          </UploadTemplateDialog>
         </div>
 
         {/* Stats Cards */}

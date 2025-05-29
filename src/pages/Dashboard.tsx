@@ -6,14 +6,12 @@ import { FileText, Download, Upload, Plus, Calendar, Trash2, TrendingUp } from "
 import { Badge } from "@/components/ui/badge";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useGeneratedPDFs } from "@/hooks/useGeneratedPDFs";
+import { Link } from "react-router-dom";
+import UploadTemplateDialog from "@/components/UploadTemplateDialog";
 
 const Dashboard = () => {
   const { templates, isLoading: templatesLoading } = useTemplates();
   const { generatedPDFs, isLoading: pdfsLoading, downloadPDF, deletePDF } = useGeneratedPDFs();
-
-  const handleUploadTemplate = () => {
-    window.location.href = "/templates";
-  };
 
   const handleUseTemplate = (templateId: string) => {
     window.location.href = `/templates/${templateId}/generate`;
@@ -26,7 +24,7 @@ const Dashboard = () => {
   if (templatesLoading || pdfsLoading) {
     return (
       <DashboardLayout>
-        <div className="p-8 flex items-center justify-center min-h-[400px]">
+        <div className="p-6 lg:p-8 flex items-center justify-center min-h-[400px]">
           <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
       </DashboardLayout>
@@ -37,76 +35,77 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-8 space-y-8">
+      <div className="p-6 lg:p-8 space-y-6 lg:space-y-8">
         {/* Welcome Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome back!</h1>
-            <p className="text-lg text-gray-600">Manage your templates and generated documents</p>
+            <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">Welcome back!</h1>
+            <p className="text-base lg:text-lg text-gray-600">Manage your templates and generated documents</p>
           </div>
-          <Button
-            onClick={handleUploadTemplate}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg px-6 py-3 text-base"
-            size="lg"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Upload New Template
-          </Button>
+          <UploadTemplateDialog>
+            <Button
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg px-6 py-3 text-base"
+              size="lg"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Upload New Template
+            </Button>
+          </UploadTemplateDialog>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-            <CardContent className="p-6">
+            <CardContent className="p-4 lg:p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-blue-100 text-sm font-medium">Total Templates</p>
-                  <p className="text-3xl font-bold">{templates.length}</p>
+                  <p className="text-2xl lg:text-3xl font-bold">{templates.length}</p>
                 </div>
                 <div className="p-3 bg-white/20 rounded-lg">
-                  <FileText className="h-6 w-6" />
+                  <FileText className="h-5 w-5 lg:h-6 lg:w-6" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="border-0 shadow-lg bg-gradient-to-br from-green-500 to-green-600 text-white">
-            <CardContent className="p-6">
+            <CardContent className="p-4 lg:p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-green-100 text-sm font-medium">Generated PDFs</p>
-                  <p className="text-3xl font-bold">{generatedPDFs.length}</p>
+                  <p className="text-2xl lg:text-3xl font-bold">{generatedPDFs.length}</p>
                 </div>
                 <div className="p-3 bg-white/20 rounded-lg">
-                  <Download className="h-6 w-6" />
+                  <Download className="h-5 w-5 lg:h-6 lg:w-6" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white">
-            <CardContent className="p-6">
+            <CardContent className="p-4 lg:p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-purple-100 text-sm font-medium">Total Usage</p>
-                  <p className="text-3xl font-bold">{totalUsage}</p>
+                  <p className="text-2xl lg:text-3xl font-bold">{totalUsage}</p>
                 </div>
                 <div className="p-3 bg-white/20 rounded-lg">
-                  <TrendingUp className="h-6 w-6" />
+                  <TrendingUp className="h-5 w-5 lg:h-6 lg:w-6" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-            <CardContent className="p-6">
+            <CardContent className="p-4 lg:p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-orange-100 text-sm font-medium">Success Rate</p>
-                  <p className="text-3xl font-bold">98%</p>
+                  <p className="text-2xl lg:text-3xl font-bold">98%</p>
                 </div>
                 <div className="p-3 bg-white/20 rounded-lg">
-                  <Upload className="h-6 w-6" />
+                  <Upload className="h-5 w-5 lg:h-6 lg:w-6" />
                 </div>
               </div>
             </CardContent>
@@ -114,30 +113,32 @@ const Dashboard = () => {
         </div>
 
         {/* Content Grid */}
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Templates Section */}
           <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-xl text-gray-900 flex items-center">
+              <CardTitle className="text-lg lg:text-xl text-gray-900 flex items-center">
                 <FileText className="h-5 w-5 mr-2 text-blue-600" />
                 Your Templates
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm lg:text-base">
                 Manage and use your uploaded document templates
               </CardDescription>
             </CardHeader>
             <CardContent>
               {templates.length === 0 ? (
-                <div className="text-center py-8">
+                <div className="text-center py-6 lg:py-8">
                   <div className="p-4 bg-gray-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                     <FileText className="h-8 w-8 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No templates yet</h3>
-                  <p className="text-gray-500 mb-4">Upload your first template to get started</p>
-                  <Button onClick={handleUploadTemplate} variant="outline">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Template
-                  </Button>
+                  <h3 className="text-base lg:text-lg font-medium text-gray-900 mb-2">No templates yet</h3>
+                  <p className="text-sm lg:text-base text-gray-500 mb-4">Upload your first template to get started</p>
+                  <UploadTemplateDialog>
+                    <Button variant="outline">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Template
+                    </Button>
+                  </UploadTemplateDialog>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -151,8 +152,8 @@ const Dashboard = () => {
                           <FileText className="h-4 w-4 text-blue-600" />
                         </div>
                         <div>
-                          <h3 className="font-medium text-gray-900 text-sm">{template.name}</h3>
-                          <div className="flex items-center space-x-2 text-xs text-gray-500">
+                          <h3 className="font-medium text-gray-900 text-sm lg:text-base">{template.name}</h3>
+                          <div className="flex items-center space-x-2 text-xs lg:text-sm text-gray-500">
                             <span>Used {template.use_count} times</span>
                             <span>•</span>
                             <span>{template.placeholders.length} fields</span>
@@ -170,9 +171,11 @@ const Dashboard = () => {
                   ))}
                   {templates.length > 5 && (
                     <div className="text-center pt-2">
-                      <Button variant="ghost" size="sm" onClick={handleUploadTemplate}>
-                        View all {templates.length} templates
-                      </Button>
+                      <Link to="/templates">
+                        <Button variant="ghost" size="sm">
+                          View all {templates.length} templates
+                        </Button>
+                      </Link>
                     </div>
                   )}
                 </div>
@@ -183,22 +186,22 @@ const Dashboard = () => {
           {/* Generated PDFs Section */}
           <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-xl text-gray-900 flex items-center">
+              <CardTitle className="text-lg lg:text-xl text-gray-900 flex items-center">
                 <Download className="h-5 w-5 mr-2 text-green-600" />
                 Recent PDFs
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm lg:text-base">
                 Download and manage your generated documents
               </CardDescription>
             </CardHeader>
             <CardContent>
               {generatedPDFs.length === 0 ? (
-                <div className="text-center py-8">
+                <div className="text-center py-6 lg:py-8">
                   <div className="p-4 bg-gray-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                     <Download className="h-8 w-8 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No PDFs generated</h3>
-                  <p className="text-gray-500">Use a template to generate your first PDF</p>
+                  <h3 className="text-base lg:text-lg font-medium text-gray-900 mb-2">No PDFs generated</h3>
+                  <p className="text-sm lg:text-base text-gray-500">Use a template to generate your first PDF</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -212,8 +215,8 @@ const Dashboard = () => {
                           <FileText className="h-4 w-4 text-red-600" />
                         </div>
                         <div>
-                          <h3 className="font-medium text-gray-900 text-sm">{pdf.name}</h3>
-                          <div className="flex items-center space-x-2 text-xs text-gray-500">
+                          <h3 className="font-medium text-gray-900 text-sm lg:text-base">{pdf.name}</h3>
+                          <div className="flex items-center space-x-2 text-xs lg:text-sm text-gray-500">
                             <span>{new Date(pdf.generated_date).toLocaleDateString()}</span>
                             {pdf.file_size && (
                               <>
@@ -245,9 +248,11 @@ const Dashboard = () => {
                   ))}
                   {generatedPDFs.length > 5 && (
                     <div className="text-center pt-2">
-                      <Button variant="ghost" size="sm">
-                        View all {generatedPDFs.length} PDFs
-                      </Button>
+                      <Link to="/generated-pdfs">
+                        <Button variant="ghost" size="sm">
+                          View all {generatedPDFs.length} PDFs
+                        </Button>
+                      </Link>
                     </div>
                   )}
                 </div>

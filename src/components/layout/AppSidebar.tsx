@@ -1,5 +1,5 @@
 
-import { FileText, Home, Settings, User, LogOut, Activity, BarChart3, Download } from "lucide-react";
+import { FileText, Home, Settings, User, LogOut, Activity, BarChart3, Download, ChevronDown } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,8 +16,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 const navigation = [
   { name: "Dashboard", icon: Home, href: "/dashboard" },
@@ -33,13 +39,12 @@ const secondaryNavigation = [
 
 export function AppSidebar() {
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
 
   const handleLogout = async () => {
     try {
       await signOut();
-      navigate("/");
+      window.location.href = "/";
     } catch (error) {
       console.error('Error signing out:', error);
     }
@@ -69,7 +74,7 @@ export function AppSidebar() {
       <SidebarContent className="px-2 lg:px-4 overflow-y-auto scrollbar-none">
         <div>
           <SidebarGroup>
-            <SidebarGroupLabel className="text-sm lg:text-base font-semibold text-gray-400 uppercase tracking-wider px-2">
+            <SidebarGroupLabel className="text-sm lg:text-base font-semibold text-gray-400 uppercase tracking-wider px-2 mb-2">
               Main Menu
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -79,16 +84,16 @@ export function AppSidebar() {
                     <SidebarMenuButton 
                       asChild
                       isActive={isActive(item.href)}
-                      className={`h-12 lg:h-14 rounded-xl transition-all duration-300 text-base lg:text-lg font-medium ${
+                      className={`h-10 lg:h-11 rounded-lg transition-all duration-200 text-sm lg:text-base font-medium ${
                         isActive(item.href) 
-                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg transform scale-105' 
-                          : 'hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 hover:shadow-md hover:transform hover:scale-102'
+                          ? 'bg-blue-600 text-white shadow-md' 
+                          : 'hover:bg-blue-50 hover:text-blue-700 text-gray-700'
                       }`}
                     >
-                      <a href={item.href} className="flex items-center space-x-3 lg:space-x-4 px-3 lg:px-4">
-                        <item.icon className="h-5 w-5 lg:h-6 lg:w-6" />
+                      <Link to={item.href} className="flex items-center space-x-3 px-3 lg:px-4">
+                        <item.icon className="h-4 w-4 lg:h-5 lg:w-5" />
                         <span>{item.name}</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -96,10 +101,10 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
 
-          <SidebarSeparator className="my-6" />
+          <SidebarSeparator className="my-4" />
 
           <SidebarGroup>
-            <SidebarGroupLabel className="text-sm lg:text-base font-semibold text-gray-400 uppercase tracking-wider px-2">
+            <SidebarGroupLabel className="text-sm lg:text-base font-semibold text-gray-400 uppercase tracking-wider px-2 mb-2">
               Tools & Settings
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -109,23 +114,23 @@ export function AppSidebar() {
                     <SidebarMenuButton 
                       asChild
                       isActive={isActive(item.href)}
-                      className={`h-12 lg:h-14 rounded-xl transition-all duration-300 text-base lg:text-lg font-medium ${
+                      className={`h-10 lg:h-11 rounded-lg transition-all duration-200 text-sm lg:text-base font-medium ${
                         isActive(item.href) 
-                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg transform scale-105' 
-                          : 'hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 hover:text-purple-700 hover:shadow-md hover:transform hover:scale-102'
+                          ? 'bg-blue-600 text-white shadow-md' 
+                          : 'hover:bg-blue-50 hover:text-blue-700 text-gray-700'
                       }`}
                     >
-                      <a href={item.href} className="flex items-center justify-between px-3 lg:px-4">
-                        <div className="flex items-center space-x-3 lg:space-x-4">
-                          <item.icon className="h-5 w-5 lg:h-6 lg:w-6" />
+                      <Link to={item.href} className="flex items-center justify-between px-3 lg:px-4">
+                        <div className="flex items-center space-x-3">
+                          <item.icon className="h-4 w-4 lg:h-5 lg:w-5" />
                           <span>{item.name}</span>
                         </div>
                         {item.badge && (
-                          <Badge variant="secondary" className="text-xs bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700">
+                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
                             {item.badge}
                           </Badge>
                         )}
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -138,29 +143,33 @@ export function AppSidebar() {
       <SidebarSeparator />
       
       <SidebarFooter className="p-3 lg:p-4">
-        <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-4 lg:p-6 border border-gray-200 shadow-lg">
-          <div className="flex items-center space-x-3 lg:space-x-4 mb-4 lg:mb-6">
-            <Avatar className="h-10 w-10 lg:h-12 lg:w-12 bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg">
-              <AvatarFallback className="text-white text-sm lg:text-base font-medium">
-                {getUserInitials()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-base lg:text-lg font-medium text-gray-900 truncate">
-                {user?.user_metadata?.name || "User"}
-              </p>
-              <p className="text-sm lg:text-base text-gray-500 truncate">{user?.email}</p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full bg-white hover:bg-gray-50 border-gray-200 text-gray-700 hover:text-gray-900 text-sm lg:text-base h-10 lg:h-12 shadow-md hover:shadow-lg transition-all duration-200"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4 lg:h-5 lg:w-5 mr-2 lg:mr-3" />
-            Sign Out
-          </Button>
+        <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-3 lg:p-4 border border-gray-200 shadow-lg">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="w-full h-auto p-0 justify-start hover:bg-transparent">
+                <div className="flex items-center space-x-3 w-full">
+                  <Avatar className="h-8 w-8 lg:h-10 lg:w-10 bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg">
+                    <AvatarFallback className="text-white text-xs lg:text-sm font-medium">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm lg:text-base font-medium text-gray-900 truncate">
+                      {user?.user_metadata?.name || "User"}
+                    </p>
+                    <p className="text-xs lg:text-sm text-gray-500 truncate">{user?.email}</p>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </SidebarFooter>
     </Sidebar>
