@@ -9,11 +9,11 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex w-full bg-gray-50">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <AppSidebar />
         <SidebarInset className="flex-1 w-full">
-          <main className="flex-1 overflow-auto bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+          <main className="flex-1 overflow-auto bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen">
+            <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 max-w-7xl py-4 sm:py-6 lg:py-8">
               {children}
             </div>
           </main>

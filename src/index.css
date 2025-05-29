@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -97,5 +98,28 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Custom scrollbar utilities */
+@layer utilities {
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Additional responsive and hover effects */
+@layer utilities {
+  .hover-scale-102:hover {
+    transform: scale(1.02);
+  }
+  
+  .transform-gpu {
+    transform: translateZ(0);
   }
 }
