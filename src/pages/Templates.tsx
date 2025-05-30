@@ -1,12 +1,11 @@
-
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, FileText, Trash2, Eye, Plus, Activity, Users, Clock, FileSpreadsheet, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Upload, FileText, Trash2, Eye, Plus, Activity, Users, Clock, FileSpreadsheet, Filter, ChevronLeft, ChevronRight, Search, Grid3X3, List } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +17,9 @@ const Templates = () => {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "docx" | "xlsx">("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const templatesPerPage = 6; // 2 rows of 3 cards each
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const templatesPerPage = 3; // Show only 3 templates per page
   
   const { templates, isLoading, uploadTemplate, deleteTemplate } = useTemplates();
   const { toast } = useToast();
@@ -63,22 +64,42 @@ const Templates = () => {
     navigate(`/templates/${templateId}/generate`);
   };
 
-  // Filter templates based on selected filter
-  const filteredTemplates = templates.filter(template => {
-    if (filter === "all") return true;
-    if (filter === "docx") return template.name.endsWith('.docx');
-    if (filter === "xlsx") return template.name.endsWith('.xlsx');
-    return true;
-  });
+  // Filter and search templates
+  const filteredTemplates = useMemo(() => {
+    let filtered = templates;
+    
+    // Apply type filter
+    if (filter !== "all") {
+      filtered = filtered.filter(template => {
+        if (filter === "docx") return template.name.endsWith('.docx');
+        if (filter === "xlsx") return template.name.endsWith('.xlsx');
+        return true;
+      });
+    }
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(template =>
+        template.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    return filtered;
+  }, [templates, filter, searchQuery]);
 
   // Paginate filtered templates
   const totalPages = Math.ceil(filteredTemplates.length / templatesPerPage);
   const startIndex = (currentPage - 1) * templatesPerPage;
   const paginatedTemplates = filteredTemplates.slice(startIndex, startIndex + templatesPerPage);
 
-  // Reset to page 1 when filter changes
+  // Reset to page 1 when filter or search changes
   const handleFilterChange = (newFilter: "all" | "docx" | "xlsx") => {
     setFilter(newFilter);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
     setCurrentPage(1);
   };
 
@@ -176,6 +197,58 @@ const Templates = () => {
           >
             <Trash2 className="h-4 w-4" />
           </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const TemplateListItem = ({ template }: { template: any }) => (
+    <Card key={template.id} className="hover:shadow-lg transition-all duration-200 border-0 shadow-sm">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4 flex-1">
+            <div className="flex-shrink-0">
+              {template.name.endsWith('.xlsx') ? (
+                <FileSpreadsheet className="h-8 w-8 text-green-600" />
+              ) : (
+                <FileText className="h-8 w-8 text-blue-600" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-gray-900 truncate">{template.name}</h3>
+              <p className="text-sm text-gray-500">
+                Uploaded {new Date(template.upload_date).toLocaleDateString()} • Used {template.use_count || 0} times
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              {template.placeholders && template.placeholders.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {template.placeholders.length} placeholders
+                </Badge>
+              )}
+              <span className="text-sm text-gray-500">
+                {template.file_size ? (template.file_size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown'}
+              </span>
+            </div>
+          </div>
+          <div className="flex space-x-2 ml-4">
+            <Button
+              onClick={() => handleGeneratePDF(template.id)}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              Generate
+            </Button>
+            <Button
+              onClick={() => deleteTemplate(template.id)}
+              variant="outline"
+              size="sm"
+              className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -284,55 +357,66 @@ const Templates = () => {
         </CardContent>
       </Card>
 
-      {/* Filter and Pagination Section */}
+      {/* Search, Filter and View Controls */}
       {templates.length > 0 && (
-        <div className="mb-6">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-gray-600" />
-              <Label htmlFor="filter" className="text-sm font-medium text-gray-700">Filter by type:</Label>
-              <Select value={filter} onValueChange={handleFilterChange}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Templates</SelectItem>
-                  <SelectItem value="docx">Word Documents</SelectItem>
-                  <SelectItem value="xlsx">Excel Spreadsheets</SelectItem>
-                </SelectContent>
-              </Select>
+        <div className="mb-6 space-y-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search templates..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="pl-10 w-64"
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Filter className="h-4 w-4 text-gray-600" />
+                <Label htmlFor="filter" className="text-sm font-medium text-gray-700">Filter:</Label>
+                <Select value={filter} onValueChange={handleFilterChange}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Templates</SelectItem>
+                    <SelectItem value="docx">Word Documents</SelectItem>
+                    <SelectItem value="xlsx">Excel Spreadsheets</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
+            <div className="flex items-center space-x-2">
+              <Button
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <span>
+              Showing {startIndex + 1}-{Math.min(startIndex + templatesPerPage, filteredTemplates.length)} of {filteredTemplates.length} templates
+            </span>
             {totalPages > 1 && (
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <span className="text-sm text-gray-600">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              <span>Page {currentPage} of {totalPages}</span>
             )}
           </div>
         </div>
       )}
 
-      {/* Templates Grid */}
+      {/* Templates Display */}
       {filteredTemplates.length === 0 ? (
         <Card className="border-0 shadow-lg">
           <CardContent className="text-center py-12 lg:py-16">
@@ -340,25 +424,44 @@ const Templates = () => {
               <FileText className="h-16 w-16 text-gray-300 mx-auto" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {filter === "all" ? "No templates yet" : `No ${filter.toUpperCase()} templates found`}
+              {searchQuery ? "No matching templates found" : 
+               filter === "all" ? "No templates yet" : `No ${filter.toUpperCase()} templates found`}
             </h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              {filter === "all" 
+              {searchQuery ? `No templates match "${searchQuery}". Try a different search term.` :
+               filter === "all" 
                 ? "Upload your first DOCX or XLSX template to get started with creating beautiful documents"
                 : `Try uploading a ${filter.toUpperCase()} file or change the filter to see other templates`
               }
             </p>
+            {searchQuery && (
+              <Button 
+                variant="outline" 
+                onClick={() => setSearchQuery("")}
+                className="mr-4"
+              >
+                Clear Search
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-8">
-          <div className="grid gap-4 lg:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-            {paginatedTemplates.map((template) => (
-              <TemplateCard key={template.id} template={template} />
-            ))}
-          </div>
+        <div className="space-y-6">
+          {viewMode === "grid" ? (
+            <div className="grid gap-4 lg:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+              {paginatedTemplates.map((template) => (
+                <TemplateCard key={template.id} template={template} />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {paginatedTemplates.map((template) => (
+                <TemplateListItem key={template.id} template={template} />
+              ))}
+            </div>
+          )}
           
-          {/* Pagination Footer */}
+          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center mt-8">
               <div className="flex items-center space-x-2">
@@ -372,17 +475,30 @@ const Templates = () => {
                 </Button>
                 
                 <div className="flex space-x-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(page)}
-                      className={currentPage === page ? "bg-blue-600 hover:bg-blue-700" : ""}
-                    >
-                      {page}
-                    </Button>
-                  ))}
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                    let page;
+                    if (totalPages <= 5) {
+                      page = i + 1;
+                    } else if (currentPage <= 3) {
+                      page = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      page = totalPages - 4 + i;
+                    } else {
+                      page = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className={currentPage === page ? "bg-blue-600 hover:bg-blue-700" : ""}
+                      >
+                        {page}
+                      </Button>
+                    );
+                  })}
                 </div>
                 
                 <Button

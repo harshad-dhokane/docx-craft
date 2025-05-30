@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as MenubarPrimitive from "@radix-ui/react-menubar"
 import { Check, ChevronRight, Circle } from "lucide-react"
@@ -21,9 +22,16 @@ const Menubar = React.forwardRef<
   <MenubarPrimitive.Root
     ref={ref}
     className={cn(
-      "flex h-10 items-center space-x-1 rounded-md border bg-background p-1 fixed top-0 left-0 right-0 z-50",
+      "flex h-10 items-center space-x-1 rounded-md border bg-background p-1 fixed top-0 left-0 right-0 z-50 no-scrollbar",
+      "scrollbar-none overflow-hidden",
       className
     )}
+    style={{ 
+      position: 'fixed',
+      overflowX: 'hidden',
+      overflowY: 'hidden',
+      scrollBehavior: 'auto'
+    }}
     {...props}
   />
 ))
