@@ -171,26 +171,26 @@ const UserGuide = () => {
             <div className="bg-gray-50 rounded-lg p-4 lg:p-6 border-2 border-dashed border-gray-300">
               <div className="space-y-4 font-mono text-sm">
                 <div className="text-gray-800">
-                  <strong>Invoice #{"{{"}invoice_number{"}}"})</strong>
+                  <strong>Invoice #{'{{invoice_number}}'}</strong>
                 </div>
                 <div className="text-gray-600">
-                  Date: {"{{"}invoice_date{"}}"}
+                  Date: {'{{invoice_date}}'}
                   <br/>
-                  Due Date: {"{{"}due_date{"}}"}
+                  Due Date: {'{{due_date}}'}
                 </div>
                 <div className="text-gray-600">
                   <strong>Bill To:</strong>
                   <br/>
-                  {"{{"}customer_name{"}}"}
+                  {'{{customer_name}}'}
                   <br/>
-                  {"{{"}customer_address{"}}"}
+                  {'{{customer_address}}'}
                   <br/>
-                  {"{{"}customer_city{"}}"}, {"{{"}customer_state{"}}"} {"{{"}customer_zip{"}}"}
+                  {'{{customer_city}}'}, {'{{customer_state}}'} {'{{customer_zip}}'}
                 </div>
                 <div className="text-gray-600">
-                  <strong>Description:</strong> {"{{"}service_description{"}}"}
+                  <strong>Description:</strong> {'{{service_description}}'}
                   <br/>
-                  <strong>Amount:</strong> ${"{{"}total_amount{"}}"}
+                  <strong>Amount:</strong> ${'{{total_amount}}'}
                 </div>
               </div>
             </div>
@@ -215,14 +215,14 @@ const UserGuide = () => {
                   <span>C1: Date</span>
                 </div>
                 <div className="grid grid-cols-3 gap-4 text-gray-600">
-                  <span>A2: {"{{"}employee_name{"}}"}}</span>
-                  <span>B2: {"{{"}department{"}}"}}</span>
-                  <span>C2: {"{{"}report_date{"}}"}}</span>
+                  <span>A2: {'{{employee_name}}'}</span>
+                  <span>B2: {'{{department}}'}</span>
+                  <span>C2: {'{{report_date}}'}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-4 text-gray-600 mt-4 pt-2 border-t">
                   <span>A4: Total Amount</span>
-                  <span>B4: {"{{"}total_amount{"}}"}}</span>
-                  <span>C4: {"{{"}currency{"}}"}}</span>
+                  <span>B4: {'{{total_amount}}'}</span>
+                  <span>C4: {'{{currency}}'}</span>
                 </div>
               </div>
             </div>
@@ -230,7 +230,7 @@ const UserGuide = () => {
         </Card>
 
         <p className="text-sm text-gray-600 mt-4">
-          When you generate documents from these templates, all {"{{"}placeholder{"}}"} fields will be replaced with the values you provide.
+          When you generate documents from these templates, all {'{{placeholder}}'} fields will be replaced with the values you provide.
         </p>
       </div>
     </DashboardLayout>
