@@ -1,3 +1,4 @@
+
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,27 @@ import { Download, FileText, Trash2, Calendar, HardDrive, Activity, TrendingUp, 
 import { useGeneratedPDFs } from "@/hooks/useGeneratedPDFs";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useMemo } from "react";
+
+// Helper functions moved outside component to be accessible to child components
+const formatFileSize = (bytes: number | null) => {
+  if (!bytes) return 'Unknown size';
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+};
+
+const getFileType = (fileName: string, filePath: string) => {
+  const name = fileName.toLowerCase();
+  const path = filePath.toLowerCase();
+  
+  if (name.includes("xlsx") || name.includes("excel") || path.includes("xlsx")) {
+    return { type: "Excel", color: "bg-green-100 text-green-700", icon: "📊" };
+  } else if (name.includes("docx") || name.includes("word") || path.includes("docx")) {
+    return { type: "Word", color: "bg-blue-100 text-blue-700", icon: "📄" };
+  } else {
+    return { type: "PDF", color: "bg-red-100 text-red-700", icon: "📕" };
+  }
+};
 
 const CreatedFiles = () => {
   const { generatedPDFs, isLoading, downloadPDF, deletePDF } = useGeneratedPDFs();
@@ -64,26 +86,6 @@ const CreatedFiles = () => {
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
     setCurrentPage(1);
-  };
-
-  const formatFileSize = (bytes: number | null) => {
-    if (!bytes) return 'Unknown size';
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-  };
-
-  const getFileType = (fileName: string, filePath: string) => {
-    const name = fileName.toLowerCase();
-    const path = filePath.toLowerCase();
-    
-    if (name.includes("xlsx") || name.includes("excel") || path.includes("xlsx")) {
-      return { type: "Excel", color: "bg-green-100 text-green-700", icon: "📊" };
-    } else if (name.includes("docx") || name.includes("word") || path.includes("docx")) {
-      return { type: "Word", color: "bg-blue-100 text-blue-700", icon: "📄" };
-    } else {
-      return { type: "PDF", color: "bg-red-100 text-red-700", icon: "📕" };
-    }
   };
 
   const totalSize = filteredFiles.reduce((acc, pdf) => acc + (pdf.file_size || 0), 0);
@@ -262,13 +264,13 @@ const CreatedFiles = () => {
           {viewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
               {paginatedFiles.map((pdf) => (
-                <FileCard key={pdf.id} pdf={pdf} />
+                <FileCard key={pdf.id} pdf={pdf} downloadPDF={downloadPDF} deletePDF={deletePDF} />
               ))}
             </div>
           ) : (
             <div className="space-y-4">
               {paginatedFiles.map((pdf) => (
-                <FileListItem key={pdf.id} pdf={pdf} />
+                <FileListItem key={pdf.id} pdf={pdf} downloadPDF={downloadPDF} deletePDF={deletePDF} />
               ))}
             </div>
           )}
@@ -330,10 +332,14 @@ const CreatedFiles = () => {
   );
 };
 
-const FileCard = ({ pdf }: { pdf: any }) => {
+const FileCard = ({ pdf, downloadPDF, deletePDF }: { 
+  pdf: any; 
+  downloadPDF: (id: string) => void; 
+  deletePDF: (id: string) => void; 
+}) => {
   const fileType = getFileType(pdf.name, pdf.file_path);
   return (
-    <Card key={pdf.id} className="hover:shadow-xl transition-all duration-300 border-0 shadow-md group">
+    <Card className="hover:shadow-xl transition-all duration-300 border-0 shadow-md group">
       <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-lg pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
@@ -408,10 +414,14 @@ const FileCard = ({ pdf }: { pdf: any }) => {
   );
 };
 
-const FileListItem = ({ pdf }: { pdf: any }) => {
+const FileListItem = ({ pdf, downloadPDF, deletePDF }: { 
+  pdf: any; 
+  downloadPDF: (id: string) => void; 
+  deletePDF: (id: string) => void; 
+}) => {
   const fileType = getFileType(pdf.name, pdf.file_path);
   return (
-    <Card key={pdf.id} className="hover:shadow-lg transition-all duration-200 border-0 shadow-sm">
+    <Card className="hover:shadow-lg transition-all duration-200 border-0 shadow-sm">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 flex-1">
