@@ -167,26 +167,36 @@ const UserGuide = () => {
               <div className="bg-gray-50 rounded-lg p-4 lg:p-6 border-2 border-dashed border-gray-300">
                 <div className="space-y-4 font-mono text-sm">
                   <div className="text-gray-800">
-                    <strong>Invoice #{"{{invoice_number}}"}</strong>
+                    <strong>Invoice #{"{{"}invoice_number{"}}"}</strong>
                   </div>
                   <div className="text-gray-600">
-                    Date: {"{{invoice_date}}"}<br/>
-                    Due Date: {"{{due_date}}"}
+                    Date: {"{{"}invoice_date{"}}"}
+                    <br/>
+                    Due Date: {"{{"}due_date{"}}"}
                   </div>
                   <div className="text-gray-600">
-                    <strong>Bill To:</strong><br/>
-                    {"{{customer_name}}"}<br/>
-                    {"{{customer_address}}"}<br/>
-                    {"{{customer_city}}"}, {"{{customer_state}}"} {"{{customer_zip}}"}
+                    <strong>Bill To:</strong>
+                    <br/>
+                    {"{{"}customer_name{"}}"}
+                    <br/>
+                    {"{{"}customer_address{"}}"}
+                    <br/>
+                    {"{{"}customer_city{"}}"}
+                    {", "}
+                    {"{{"}customer_state{"}}"}
+                    {" "}
+                    {"{{"}customer_zip{"}}"}
                   </div>
                   <div className="text-gray-600">
-                    <strong>Description:</strong> {"{{service_description}}"}<br/>
-                    <strong>Amount:</strong> ${"{{total_amount}}"}
+                    <strong>Description:</strong> {"{{"}service_description{"}}"}
+                    <br/>
+                    <strong>Amount:</strong> ${"{{"}total_amount{"}}"}
                   </div>
                 </div>
               </div>
               <p className="mt-4 text-sm text-gray-600">
-                When you generate a PDF from this template, all {"{{placeholder}}"} fields will be replaced with the values you provide.
+                When you generate a PDF from this template, all {"{{"}placeholder{"}}"}
+                {" "}fields will be replaced with the values you provide.
               </p>
             </CardContent>
           </Card>
