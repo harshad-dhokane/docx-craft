@@ -15,7 +15,7 @@ export function useAnalytics() {
       // Get templates count
       const { data: templates, error: templatesError } = await supabase
         .from('templates')
-        .select('id, use_count, upload_date')
+        .select('id, use_count, upload_date, name')
         .eq('user_id', user.id);
 
       if (templatesError) throw templatesError;
@@ -45,7 +45,6 @@ export function useAnalytics() {
 
       // Weekly data for charts
       const now = new Date();
-      const weekStart = startOfWeek(now);
       const weeklyData = [];
       
       for (let i = 6; i >= 0; i--) {
@@ -61,9 +60,9 @@ export function useAnalytics() {
         });
       }
 
-      // Monthly template usage
+      // Monthly template usage - use template name or fallback to ID
       const monthlyUsage = templates.map(template => ({
-        name: template.name.substring(0, 20) + (template.name.length > 20 ? '...' : ''),
+        name: template.name ? (template.name.length > 20 ? template.name.substring(0, 20) + '...' : template.name) : `Template ${template.id.substring(0, 8)}`,
         usage: template.use_count || 0,
       })).sort((a, b) => b.usage - a.usage).slice(0, 5);
 

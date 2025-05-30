@@ -90,14 +90,14 @@ const UserGuide = () => {
     <DashboardLayout>
       <div className="py-6 lg:py-8">
         <div className="mb-6 lg:mb-8">
-          <h1 className="page-title">User Guide</h1>
-          <p className="page-subtitle mt-2">Learn how to create and use templates effectively</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">User Guide</h1>
+          <p className="text-base sm:text-lg text-gray-600 mt-2">Learn how to create and use templates effectively</p>
         </div>
 
         {/* Getting Started Steps */}
         <div className="space-y-6 lg:space-y-8 mb-8 lg:mb-12">
           <div>
-            <h2 className="section-title mb-4 lg:mb-6">Getting Started</h2>
+            <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4 lg:mb-6">Getting Started</h2>
             <div className="grid gap-4 lg:gap-6">
               {steps.map((step, index) => (
                 <Card key={index} className="hover:shadow-lg transition-all duration-300 border-0 shadow-md">
@@ -107,8 +107,8 @@ const UserGuide = () => {
                         <step.icon className="h-6 w-6 text-white" />
                       </div>
                       <div className="flex-1">
-                        <CardTitle className="card-title">{step.title}</CardTitle>
-                        <p className="card-description mt-1">{step.description}</p>
+                        <CardTitle className="text-lg font-semibold text-gray-900">{step.title}</CardTitle>
+                        <p className="text-sm text-gray-600 mt-1">{step.description}</p>
                       </div>
                     </div>
                   </CardHeader>
@@ -117,7 +117,7 @@ const UserGuide = () => {
                       {step.details.map((detail, detailIndex) => (
                         <li key={detailIndex} className="flex items-start space-x-3">
                           <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                          <span className="body-text">{detail}</span>
+                          <span className="text-sm text-gray-700">{detail}</span>
                         </li>
                       ))}
                     </ul>
@@ -130,12 +130,12 @@ const UserGuide = () => {
 
         {/* Tips and Best Practices */}
         <div>
-          <h2 className="section-title mb-4 lg:mb-6">Tips & Best Practices</h2>
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4 lg:mb-6">Tips & Best Practices</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
             {tips.map((tip, index) => (
               <Card key={index} className="hover:shadow-lg transition-all duration-300 border-0 shadow-md">
                 <CardHeader>
-                  <CardTitle className="card-title flex items-center space-x-2">
+                  <CardTitle className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
                     <span>{tip.title}</span>
                     <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
                       {tip.items.length} tips
@@ -146,7 +146,7 @@ const UserGuide = () => {
                   {tip.items.map((item, itemIndex) => (
                     <div key={itemIndex} className="flex items-start space-x-2">
                       <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                      <span className="small-text">{item}</span>
+                      <span className="text-sm text-gray-600">{item}</span>
                     </div>
                   ))}
                 </CardContent>
@@ -157,36 +157,36 @@ const UserGuide = () => {
 
         {/* Example Template */}
         <div className="mt-8 lg:mt-12">
-          <h2 className="section-title mb-4 lg:mb-6">Example Template</h2>
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4 lg:mb-6">Example Template</h2>
           <Card className="border-0 shadow-lg">
             <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-lg">
-              <CardTitle className="card-title">Sample Invoice Template</CardTitle>
-              <p className="card-description">Here's an example of how to structure placeholders in your Word document:</p>
+              <CardTitle className="text-lg font-semibold text-gray-900">Sample Invoice Template</CardTitle>
+              <p className="text-sm text-gray-600">Here's an example of how to structure placeholders in your Word document:</p>
             </CardHeader>
             <CardContent className="p-4 lg:p-6">
               <div className="bg-gray-50 rounded-lg p-4 lg:p-6 border-2 border-dashed border-gray-300">
                 <div className="space-y-4 font-mono text-sm">
                   <div className="text-gray-800">
-                    <strong>Invoice #{{invoice_number}}</strong>
+                    <strong>Invoice #{"{{invoice_number}}"}</strong>
                   </div>
                   <div className="text-gray-600">
-                    Date: {{invoice_date}}<br/>
-                    Due Date: {{due_date}}
+                    Date: {"{{invoice_date}}"}<br/>
+                    Due Date: {"{{due_date}}"}
                   </div>
                   <div className="text-gray-600">
                     <strong>Bill To:</strong><br/>
-                    {{customer_name}}<br/>
-                    {{customer_address}}<br/>
-                    {{customer_city}}, {{customer_state}} {{customer_zip}}
+                    {"{{customer_name}}"}<br/>
+                    {"{{customer_address}}"}<br/>
+                    {"{{customer_city}}"}, {"{{customer_state}}"} {"{{customer_zip}}"}
                   </div>
                   <div className="text-gray-600">
-                    <strong>Description:</strong> {{service_description}}<br/>
-                    <strong>Amount:</strong> ${{total_amount}}
+                    <strong>Description:</strong> {"{{service_description}}"}<br/>
+                    <strong>Amount:</strong> ${"{{total_amount}}"}
                   </div>
                 </div>
               </div>
-              <p className="mt-4 small-text text-gray-600">
-                When you generate a PDF from this template, all {{placeholder}} fields will be replaced with the values you provide.
+              <p className="mt-4 text-sm text-gray-600">
+                When you generate a PDF from this template, all {"{{placeholder}}"} fields will be replaced with the values you provide.
               </p>
             </CardContent>
           </Card>
