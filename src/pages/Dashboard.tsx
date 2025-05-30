@@ -24,7 +24,7 @@ const Dashboard = () => {
   if (templatesLoading || pdfsLoading) {
     return (
       <DashboardLayout>
-        <div className="p-6 lg:p-8 flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center justify-center min-h-[400px]">
           <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
       </DashboardLayout>
@@ -35,7 +35,7 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 space-y-6 lg:space-y-8">
+      <div className="space-y-6 lg:space-y-8">
         {/* Welcome Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>

@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, FileText, Trash2, Eye, Plus, Activity, Users, Clock, FileSpreadsheet } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Upload, FileText, Trash2, Eye, Plus, Activity, Users, Clock, FileSpreadsheet, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +16,10 @@ import UploadTemplateDialog from "@/components/UploadTemplateDialog";
 const Templates = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [filter, setFilter] = useState<"all" | "docx" | "xlsx">("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const templatesPerPage = 6; // 2 rows of 3 cards each
+  
   const { templates, isLoading, uploadTemplate, deleteTemplate } = useTemplates();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -56,6 +61,25 @@ const Templates = () => {
 
   const handleGeneratePDF = (templateId: string) => {
     navigate(`/templates/${templateId}/generate`);
+  };
+
+  // Filter templates based on selected filter
+  const filteredTemplates = templates.filter(template => {
+    if (filter === "all") return true;
+    if (filter === "docx") return template.name.endsWith('.docx');
+    if (filter === "xlsx") return template.name.endsWith('.xlsx');
+    return true;
+  });
+
+  // Paginate filtered templates
+  const totalPages = Math.ceil(filteredTemplates.length / templatesPerPage);
+  const startIndex = (currentPage - 1) * templatesPerPage;
+  const paginatedTemplates = filteredTemplates.slice(startIndex, startIndex + templatesPerPage);
+
+  // Reset to page 1 when filter changes
+  const handleFilterChange = (newFilter: "all" | "docx" | "xlsx") => {
+    setFilter(newFilter);
+    setCurrentPage(1);
   };
 
   // Categorize templates by file type
@@ -260,49 +284,115 @@ const Templates = () => {
         </CardContent>
       </Card>
 
+      {/* Filter and Pagination Section */}
+      {templates.length > 0 && (
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-gray-600" />
+              <Label htmlFor="filter" className="text-sm font-medium text-gray-700">Filter by type:</Label>
+              <Select value={filter} onValueChange={handleFilterChange}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Templates</SelectItem>
+                  <SelectItem value="docx">Word Documents</SelectItem>
+                  <SelectItem value="xlsx">Excel Spreadsheets</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {totalPages > 1 && (
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Templates Grid */}
-      {templates.length === 0 ? (
+      {filteredTemplates.length === 0 ? (
         <Card className="border-0 shadow-lg">
           <CardContent className="text-center py-12 lg:py-16">
             <div className="mb-4">
               <FileText className="h-16 w-16 text-gray-300 mx-auto" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No templates yet</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {filter === "all" ? "No templates yet" : `No ${filter.toUpperCase()} templates found`}
+            </h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              Upload your first DOCX or XLSX template to get started with creating beautiful documents
+              {filter === "all" 
+                ? "Upload your first DOCX or XLSX template to get started with creating beautiful documents"
+                : `Try uploading a ${filter.toUpperCase()} file or change the filter to see other templates`
+              }
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-8">
-          {/* Word Documents Section */}
-          {docxTemplates.length > 0 && (
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <FileText className="h-5 w-5 text-blue-600" />
-                <h2 className="text-xl font-semibold text-gray-900">Word Documents</h2>
-                <Badge variant="secondary">{docxTemplates.length}</Badge>
-              </div>
-              <div className="grid gap-4 lg:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-                {docxTemplates.map((template) => (
-                  <TemplateCard key={template.id} template={template} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Excel Documents Section */}
-          {excelTemplates.length > 0 && (
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <FileSpreadsheet className="h-5 w-5 text-green-600" />
-                <h2 className="text-xl font-semibold text-gray-900">Excel Spreadsheets</h2>
-                <Badge variant="secondary">{excelTemplates.length}</Badge>
-              </div>
-              <div className="grid gap-4 lg:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-                {excelTemplates.map((template) => (
-                  <TemplateCard key={template.id} template={template} />
-                ))}
+          <div className="grid gap-4 lg:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+            {paginatedTemplates.map((template) => (
+              <TemplateCard key={template.id} template={template} />
+            ))}
+          </div>
+          
+          {/* Pagination Footer */}
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-8">
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                
+                <div className="flex space-x-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className={currentPage === page ? "bg-blue-600 hover:bg-blue-700" : ""}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
               </div>
             </div>
           )}
