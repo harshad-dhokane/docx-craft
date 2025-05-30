@@ -1,75 +1,134 @@
-
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, TrendingUp, Users, FileText, Download, Eye, Calendar, Activity } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { useGeneratedPDFs } from "@/hooks/useGeneratedPDFs";
+import { useTemplates } from "@/hooks/useTemplates";
+import { useActivity } from "@/hooks/useActivity";
+import { useMemo } from "react";
 
 const Analytics = () => {
-  const stats = [
-    {
-      title: "Total Templates",
-      value: "24",
-      description: "Active templates",
-      icon: FileText,
-      trend: "+12%",
-      trendUp: true,
-      gradient: "from-blue-500 to-blue-600",
-    },
-    {
-      title: "PDFs Generated",
-      value: "1,234",
-      description: "This month",
-      icon: Download,
-      trend: "+23%",
-      trendUp: true,
-      gradient: "from-green-500 to-green-600",
-    },
-    {
-      title: "Views",
-      value: "5,678",
-      description: "Template views",
-      icon: Eye,
-      trend: "+8%",
-      trendUp: true,
-      gradient: "from-purple-500 to-purple-600",
-    },
-    {
-      title: "Users",
-      value: "89",
-      description: "Active users",
-      icon: Users,
-      trend: "+5%",
-      trendUp: true,
-      gradient: "from-orange-500 to-orange-600",
-    },
-  ];
+  const { generatedPDFs } = useGeneratedPDFs();
+  const { templates } = useTemplates();
+  const { activities } = useActivity();
 
-  const monthlyData = [
-    { month: 'Jan', pdfs: 65, templates: 28 },
-    { month: 'Feb', pdfs: 89, templates: 32 },
-    { month: 'Mar', pdfs: 123, templates: 35 },
-    { month: 'Apr', pdfs: 156, templates: 40 },
-    { month: 'May', pdfs: 198, templates: 42 },
-    { month: 'Jun', pdfs: 234, templates: 45 },
-  ];
+  const stats = useMemo(() => {
+    const totalTemplates = templates.length;
+    const totalPDFs = generatedPDFs.length;
+    const thisMonthPDFs = generatedPDFs.filter(pdf => {
+      const genDate = new Date(pdf.generated_date);
+      const thisMonth = new Date();
+      return genDate.getMonth() === thisMonth.getMonth() && genDate.getFullYear() === thisMonth.getFullYear();
+    }).length;
+    const recentActivities = activities.length;
 
-  const usageData = [
-    { name: 'Invoice Template', usage: 35, color: '#8B5CF6' },
-    { name: 'Contract Template', usage: 25, color: '#06B6D4' },
-    { name: 'Report Template', usage: 20, color: '#10B981' },
-    { name: 'Letter Template', usage: 15, color: '#F59E0B' },
-    { name: 'Others', usage: 5, color: '#EF4444' },
-  ];
+    return [
+      {
+        title: "Total Templates",
+        value: totalTemplates.toString(),
+        description: "Active templates",
+        icon: FileText,
+        trend: "+12%",
+        trendUp: true,
+        gradient: "from-blue-500 to-blue-600",
+      },
+      {
+        title: "Files Generated",
+        value: totalPDFs.toString(),
+        description: "This month",
+        icon: Download,
+        trend: "+23%",
+        trendUp: true,
+        gradient: "from-green-500 to-green-600",
+      },
+      {
+        title: "Activities",
+        value: recentActivities.toString(),
+        description: "Recent activities",
+        icon: Eye,
+        trend: "+8%",
+        trendUp: true,
+        gradient: "from-purple-500 to-purple-600",
+      },
+      {
+        title: "Templates Used",
+        value: templates.reduce((acc, template) => acc + (template.use_count || 0), 0).toString(),
+        description: "Total usage",
+        icon: Users,
+        trend: "+5%",
+        trendUp: true,
+        gradient: "from-orange-500 to-orange-600",
+      },
+    ];
+  }, [templates, generatedPDFs, activities]);
 
-  const weeklyActivity = [
-    { day: 'Mon', activity: 12 },
-    { day: 'Tue', activity: 19 },
-    { day: 'Wed', activity: 15 },
-    { day: 'Thu', activity: 25 },
-    { day: 'Fri', activity: 22 },
-    { day: 'Sat', activity: 8 },
-    { day: 'Sun', activity: 5 },
-  ];
+  const monthlyData = useMemo(() => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentYear = new Date().getFullYear();
+    
+    return months.map((month, index) => {
+      const monthlyPDFs = generatedPDFs.filter(pdf => {
+        const genDate = new Date(pdf.generated_date);
+        return genDate.getMonth() === index && genDate.getFullYear() === currentYear;
+      }).length;
+      
+      const monthlyTemplates = templates.filter(template => {
+        const uploadDate = new Date(template.upload_date);
+        return uploadDate.getMonth() === index && uploadDate.getFullYear() === currentYear;
+      }).length;
+
+      return {
+        month,
+        pdfs: monthlyPDFs,
+        templates: monthlyTemplates
+      };
+    });
+  }, [generatedPDFs, templates]);
+
+  const usageData = useMemo(() => {
+    const templateUsage = templates.reduce((acc, template) => {
+      const usage = template.use_count || 0;
+      if (usage > 0) {
+        acc.push({
+          name: template.name,
+          usage: usage,
+          color: '#8B5CF6'
+        });
+      }
+      return acc;
+    }, [] as Array<{name: string, usage: number, color: string}>);
+
+    // Sort by usage and take top 5
+    templateUsage.sort((a, b) => b.usage - a.usage);
+    const topTemplates = templateUsage.slice(0, 5);
+    
+    const colors = ['#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444'];
+    return topTemplates.map((template, index) => ({
+      ...template,
+      color: colors[index] || '#8B5CF6'
+    }));
+  }, [templates]);
+
+  const weeklyActivity = useMemo(() => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const currentWeek = new Date();
+    const startOfWeek = new Date(currentWeek.setDate(currentWeek.getDate() - currentWeek.getDay() + 1));
+    
+    return days.map((day, index) => {
+      const dayDate = new Date(startOfWeek);
+      dayDate.setDate(startOfWeek.getDate() + index);
+      
+      const dayActivities = activities.filter(activity => {
+        const activityDate = new Date(activity.created_at);
+        return activityDate.toDateString() === dayDate.toDateString();
+      }).length;
+
+      return {
+        day,
+        activity: dayActivities
+      };
+    });
+  }, [activities]);
 
   return (
     <DashboardLayout>
@@ -110,7 +169,7 @@ const Analytics = () => {
                 Monthly Generation Trends
               </CardTitle>
               <CardDescription className="text-sm sm:text-base">
-                PDF generation and template creation over time
+                File generation and template creation over time
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -191,57 +250,59 @@ const Analytics = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg sm:text-xl">Template Usage Distribution</CardTitle>
-              <CardDescription className="text-sm sm:text-base">
-                Most popular templates by usage
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64 sm:h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={usageData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="usage"
-                    >
-                      {usageData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)', 
-                        border: 'none', 
-                        borderRadius: '12px', 
-                        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)' 
-                      }} 
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-4 space-y-2">
-                {usageData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center">
-                      <div 
-                        className="w-3 h-3 rounded-full mr-2" 
-                        style={{ backgroundColor: item.color }}
-                      ></div>
-                      <span className="text-gray-700 font-medium">{item.name}</span>
+          {usageData.length > 0 && (
+            <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg sm:text-xl">Template Usage Distribution</CardTitle>
+                <CardDescription className="text-sm sm:text-base">
+                  Most popular templates by usage
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64 sm:h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={usageData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="usage"
+                      >
+                        {usageData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                          border: 'none', 
+                          borderRadius: '12px', 
+                          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)' 
+                        }} 
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {usageData.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center">
+                        <div 
+                          className="w-3 h-3 rounded-full mr-2" 
+                          style={{ backgroundColor: item.color }}
+                        ></div>
+                        <span className="text-gray-700 font-medium">{item.name}</span>
+                      </div>
+                      <span className="text-gray-600 font-semibold">{item.usage}</span>
                     </div>
-                    <span className="text-gray-600 font-semibold">{item.usage}%</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
             <CardHeader className="pb-4">
@@ -250,37 +311,37 @@ const Analytics = () => {
                 Recent Performance
               </CardTitle>
               <CardDescription className="text-sm sm:text-base">
-                Key metrics from the last 30 days
+                Key metrics from your data
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 sm:space-y-6">
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-blue-800">Average Generation Time</span>
-                  <span className="text-lg font-bold text-blue-900">2.3s</span>
+                  <span className="text-sm font-medium text-blue-800">Active Templates</span>
+                  <span className="text-lg font-bold text-blue-900">{templates.length}</span>
                 </div>
                 <div className="w-full bg-blue-200 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full" style={{ width: '78%' }}></div>
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full" style={{ width: '100%' }}></div>
                 </div>
               </div>
 
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-green-800">Success Rate</span>
-                  <span className="text-lg font-bold text-green-900">98.5%</span>
+                  <span className="text-sm font-medium text-green-800">Files Generated</span>
+                  <span className="text-lg font-bold text-green-900">{generatedPDFs.length}</span>
                 </div>
                 <div className="w-full bg-green-200 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full" style={{ width: '98.5%' }}></div>
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full" style={{ width: '85%' }}></div>
                 </div>
               </div>
 
               <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-200">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-purple-800">User Satisfaction</span>
-                  <span className="text-lg font-bold text-purple-900">4.8/5</span>
+                  <span className="text-sm font-medium text-purple-800">Recent Activities</span>
+                  <span className="text-lg font-bold text-purple-900">{activities.length}</span>
                 </div>
                 <div className="w-full bg-purple-200 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full" style={{ width: '96%' }}></div>
+                  <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full" style={{ width: '70%' }}></div>
                 </div>
               </div>
             </CardContent>

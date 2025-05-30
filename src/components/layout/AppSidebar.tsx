@@ -1,4 +1,3 @@
-
 import { FileText, Home, Settings, User, LogOut, Activity, BarChart3, Download, ChevronDown, BookOpen } from "lucide-react";
 import {
   Sidebar,
@@ -29,7 +28,7 @@ import { Link, useLocation } from "react-router-dom";
 const navigation = [
   { name: "Dashboard", icon: Home, href: "/dashboard" },
   { name: "Templates", icon: FileText, href: "/templates" },
-  { name: "Generated PDFs", icon: Download, href: "/generated-pdfs" },
+  { name: "Created Files", icon: Download, href: "/generated-pdfs" },
   { name: "User Guide", icon: BookOpen, href: "/user-guide" },
 ];
 
@@ -66,7 +65,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar className="border-r border-gray-200">
-      <SidebarHeader className="p-4 lg:p-6">
+      <SidebarHeader className="p-3 lg:p-4 pt-2 lg:pt-3">
         <div className="flex items-center space-x-2 lg:space-x-3">
           <div className="p-1.5 lg:p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg">
             <FileText className="h-5 w-5 lg:h-6 lg:w-6 text-white" />
