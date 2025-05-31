@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -51,10 +52,6 @@ const TemplateGenerator = () => {
       ...prev,
       [placeholder]: value
     }));
-  };
-
-  const handleFieldTypeSelect = (placeholder: string, value: string) => {
-    handleInputChange(placeholder, value);
   };
 
   const handleGenerateDocument = async (format: 'pdf' | 'docx' | 'xlsx' = 'pdf') => {
@@ -215,7 +212,7 @@ const TemplateGenerator = () => {
                           <EnhancedFieldTypeSelector
                             placeholder={placeholder}
                             value={placeholderData[placeholder] || ""}
-                            onValueChange={(value) => handleFieldTypeSelect(placeholder, value)}
+                            onChange={(value) => handleInputChange(placeholder, value)}
                           />
                         </div>
                       ))}

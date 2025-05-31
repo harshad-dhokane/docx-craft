@@ -1,7 +1,8 @@
-
 import * as React from "react"
 import * as MenubarPrimitive from "@radix-ui/react-menubar"
-import { Check, ChevronRight, Circle } from "lucide-react"
+import { Check, ChevronRight, Circle, Menu } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useSidebar } from "@/components/ui/sidebar"
 
 import { cn } from "@/lib/utils"
 
@@ -18,23 +19,40 @@ const MenubarRadioGroup = MenubarPrimitive.RadioGroup
 const Menubar = React.forwardRef<
   React.ElementRef<typeof MenubarPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof MenubarPrimitive.Root>
->(({ className, ...props }, ref) => (
-  <MenubarPrimitive.Root
-    ref={ref}
-    className={cn(
-      "flex h-10 items-center space-x-1 rounded-md border bg-background p-1 fixed top-0 left-0 right-0 z-50 no-scrollbar",
-      "scrollbar-none overflow-hidden",
-      className
-    )}
-    style={{ 
-      position: 'fixed',
-      overflowX: 'hidden',
-      overflowY: 'hidden',
-      scrollBehavior: 'auto'
-    }}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  const { isMobile, setOpenMobile } = useSidebar()
+
+  return (
+    <div className="flex items-center justify-between w-full">
+      {isMobile && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setOpenMobile(true)}
+          className="md:hidden"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+      )}
+      <MenubarPrimitive.Root
+        ref={ref}
+        className={cn(
+          "flex h-10 items-center space-x-1 rounded-md border bg-background p-1 fixed top-0 left-0 right-0 z-50 no-scrollbar",
+          "scrollbar-none overflow-hidden",
+          isMobile && "pl-12", // Add padding for mobile menu button
+          className
+        )}
+        style={{ 
+          position: 'fixed',
+          overflowX: 'hidden',
+          overflowY: 'hidden',
+          scrollBehavior: 'auto'
+        }}
+        {...props}
+      />
+    </div>
+  )
+})
 Menubar.displayName = MenubarPrimitive.Root.displayName
 
 const MenubarTrigger = React.forwardRef<

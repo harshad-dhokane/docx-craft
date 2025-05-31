@@ -80,40 +80,18 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
 const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, PlaceholderValue>): Promise<Blob> => {
   const handler = new TemplateHandler();
   
-  // Process the data to handle images
-  const processedData: Record<string, string | {
-    _type: 'image';
-    source: Buffer;
-    format: string;
-    width: number;
-    height: number;
-    altText?: string;
-  }> = {};
+  // Process the data to handle text placeholders
+  const processedData: Record<string, string> = {};
   
   for (const [key, value] of Object.entries(data)) {
     if (typeof value === 'string') {
-      if (value.startsWith('data:image')) {
-        // Convert base64 image to binary
-        const base64Data = value.replace(/^data:image\/\w+;base64,/, '');
-        const imageBuffer = Buffer.from(base64Data, 'base64');
-        
-        processedData[key] = {
-          _type: 'image',
-          source: imageBuffer,
-          format: MimeType.Png,
-          width: 400,
-          height: 300,
-          altText: key
-        };
-      } else {
-        processedData[key] = value;
-      }
+      processedData[key] = value;
     }
   }
 
   try {
-    const doc = await handler.process(new Blob([templateBuffer]), processedData);
-    return new Blob([await doc.arrayBuffer()], {
+    const doc = await handler.process(templateBuffer, processedData);
+    return new Blob([doc], {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     });
   } catch (error) {
@@ -184,6 +162,12 @@ export const generateEnhancedPDF = async ({
 
     if (uploadError) throw new Error(`Storage upload error: ${uploadError.message}`);
 
+    // Convert placeholderData to JSON-compatible format
+    const jsonPlaceholderData: Record<string, any> = {};
+    Object.entries(placeholderData).forEach(([key, value]) => {
+      jsonPlaceholderData[key] = typeof value === 'string' ? value : '[Image]';
+    });
+
     // Save metadata to database
     const { data: generatedFile, error: insertError } = await supabase
       .from('generated_pdfs')
@@ -193,7 +177,7 @@ export const generateEnhancedPDF = async ({
         template_id: templateId,
         file_path: storagePath,
         file_size: resultBlob.size,
-        placeholder_data: placeholderData,
+        placeholder_data: jsonPlaceholderData,
         generated_date: new Date().toISOString()
       })
       .select()
