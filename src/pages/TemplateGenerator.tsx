@@ -64,6 +64,7 @@ const TemplateGenerator = () => {
 
     try {
       await generateEnhancedPDF({
+        templateId: templateId,
         templateName: template.name,
         placeholderData,
         placeholders: template.placeholders || [],

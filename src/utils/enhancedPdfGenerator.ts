@@ -1,6 +1,8 @@
+
 import { Workbook } from 'exceljs';
 import { TemplateHandler, MimeType } from 'easy-template-x';
 import { Buffer } from 'buffer';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ImageData {
   _type: 'image';
@@ -15,6 +17,7 @@ interface ImageData {
 type PlaceholderValue = string | ImageData;
 
 interface GenerationOptions {
+  templateId: string;
   templateName: string;
   placeholderData: Record<string, PlaceholderValue>;
   placeholders: string[];
@@ -141,27 +144,37 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
 };
 
 export const generateEnhancedPDF = async ({ 
+  templateId,
   templateName, 
   placeholderData,
   format 
 }: GenerationOptions): Promise<void> => {
   try {
-    // Load the template file with proper headers
-    const response = await fetch(`/templates/${templateName}`, {
-      headers: {
-        'Content-Type': format === 'xlsx' 
-          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-          : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'Cache-Control': 'no-cache'
-      }
-    });
+    console.log('Starting enhanced PDF generation with template ID:', templateId);
     
-    if (!response.ok) {
-      console.error('Template fetch error:', response.status, response.statusText);
-      throw new Error(`Failed to load template: ${response.statusText}`);
-    }
+    // Get template info from database
+    const { data: template, error: templateError } = await supabase
+      .from('templates')
+      .select('*')
+      .eq('id', templateId)
+      .single();
+
+    if (templateError) throw new Error(`Template fetch error: ${templateError.message}`);
+    if (!template) throw new Error('Template not found');
+
+    console.log('Template found:', template.name, 'File path:', template.file_path);
+
+    // Download template file from Supabase storage
+    const { data: fileData, error: fileError } = await supabase.storage
+      .from('templates')
+      .download(template.file_path);
+
+    if (fileError) throw new Error(`Template download error: ${fileError.message}`);
+    if (!fileData) throw new Error('Template file is empty');
+
+    console.log('Template file downloaded successfully');
     
-    const templateBuffer = await response.arrayBuffer();
+    const templateBuffer = await fileData.arrayBuffer();
     let resultBlob: Blob;
 
     // Process based on format
@@ -191,6 +204,8 @@ export const generateEnhancedPDF = async ({
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
+
+    console.log('Document generated and download triggered successfully');
 
   } catch (error) {
     console.error('Error generating document:', error);
