@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, Plus } from "lucide-react";
+import { Upload, FileText, FileSpreadsheet, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,12 +29,17 @@ const UploadTemplateDialog = ({ children }: UploadTemplateDialogProps) => {
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+    if (file && (
+      file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      file.name.endsWith('.docx') ||
+      file.name.endsWith('.xlsx')
+    )) {
       setSelectedFile(file);
     } else {
       toast({
         title: "Invalid File",
-        description: "Please select a .docx file",
+        description: "Please select a .docx or .xlsx file",
         variant: "destructive",
       });
     }
@@ -67,6 +72,13 @@ const UploadTemplateDialog = ({ children }: UploadTemplateDialogProps) => {
     }
   };
 
+  const getFileIcon = (fileName: string) => {
+    if (fileName.endsWith('.xlsx')) {
+      return <FileSpreadsheet className="h-5 w-5 text-green-600" />;
+    }
+    return <FileText className="h-5 w-5 text-blue-600" />;
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -79,18 +91,18 @@ const UploadTemplateDialog = ({ children }: UploadTemplateDialogProps) => {
             <span>Upload New Template</span>
           </DialogTitle>
           <DialogDescription className="text-gray-600">
-            Upload a .docx file to create a new template
+            Upload a .docx or .xlsx file to create a new template
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
             <Label htmlFor="dialog-file-upload" className="text-sm font-medium text-gray-700">
-              Select DOCX File
+              Select DOCX or XLSX File
             </Label>
             <Input
               id="dialog-file-upload"
               type="file"
-              accept=".docx"
+              accept=".docx,.xlsx"
               onChange={handleFileSelect}
               className="mt-1 border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors"
             />
@@ -99,7 +111,7 @@ const UploadTemplateDialog = ({ children }: UploadTemplateDialogProps) => {
           {selectedFile && (
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
               <div className="flex items-center space-x-3">
-                <FileText className="h-5 w-5 text-blue-600" />
+                {getFileIcon(selectedFile.name)}
                 <div>
                   <span className="text-sm font-medium text-gray-800">{selectedFile.name}</span>
                   <Badge variant="outline" className="ml-2 bg-white">

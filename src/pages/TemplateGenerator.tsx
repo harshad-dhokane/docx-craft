@@ -8,6 +8,7 @@ import { ArrowLeft, FileText, Download, Loader2 } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import EnhancedFieldTypeSelector from "@/components/form/EnhancedFieldTypeSelector";
 import { useTemplates } from "@/hooks/useTemplates";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { generateEnhancedPDF } from "@/utils/enhancedPdfGenerator";
 import { Separator } from "@/components/ui/separator";
@@ -17,6 +18,7 @@ const TemplateGenerator = () => {
   const { templateId } = useParams<{ templateId: string }>();
   const navigate = useNavigate();
   const { templates, isGenerating } = useTemplates();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [placeholderData, setPlaceholderData] = useState<Record<string, string>>({});
   const [pdfName, setPdfName] = useState("");
@@ -56,7 +58,7 @@ const TemplateGenerator = () => {
   };
 
   const handleGenerateDocument = async (format: 'pdf' | 'docx' | 'xlsx' = 'pdf') => {
-    if (!template || !templateId) return;
+    if (!template || !templateId || !user) return;
 
     // Use a default document name if none is provided
     const documentName = pdfName.trim() || `${template.name.replace(/\.[^/.]+$/, '')}_${new Date().toISOString().split('T')[0]}`;
@@ -68,15 +70,19 @@ const TemplateGenerator = () => {
         templateName: template.name,
         placeholderData,
         placeholders: template.placeholders || [],
-        format
+        format,
+        userId: user.id
       });
 
       toast({
         title: "Success",
-        description: `Your ${format.toUpperCase()} document has been generated successfully.`,
+        description: `Your ${format.toUpperCase()} document has been generated and saved successfully.`,
       });
 
-      // Don't navigate away since we're downloading the file
+      // Navigate to created files after successful generation
+      setTimeout(() => {
+        navigate('/generated-pdfs');
+      }, 2000);
     } catch (error) {
       console.error('Generation error:', error);
       toast({
@@ -196,25 +202,27 @@ const TemplateGenerator = () => {
                 </div>
               </CardHeader>
 
-              <CardContent>
-                <Separator className="my-6" />
-
-                {/* Template Fields */}
-                <ScrollArea className="h-[500px] pr-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {template.placeholders?.map((placeholder: string) => (
-                      <div key={placeholder} className="bg-gray-50/50 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <EnhancedFieldTypeSelector
-                          placeholder={placeholder}
-                          value={placeholderData[placeholder] || ''}
-                          onChange={(value) => handleInputChange(placeholder, value)}
-                          className="w-full"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </CardContent>
+              {template.placeholders && template.placeholders.length > 0 && (
+                <CardContent>
+                  <Separator className="mb-6" />
+                  <ScrollArea className="h-96">
+                    <div className="space-y-4 pr-4">
+                      {template.placeholders.map((placeholder: string) => (
+                        <div key={placeholder} className="space-y-2">
+                          <Label htmlFor={placeholder} className="font-medium">
+                            {placeholder}
+                          </Label>
+                          <EnhancedFieldTypeSelector
+                            placeholder={placeholder}
+                            value={placeholderData[placeholder] || ""}
+                            onValueChange={(value) => handleFieldTypeSelect(placeholder, value)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              )}
             </Card>
           </div>
         )}

@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,52 +23,15 @@ import { useNavigate } from "react-router-dom";
 import UploadTemplateDialog from "@/components/UploadTemplateDialog";
 
 const Templates = () => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploadLoading, setUploadLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "docx" | "xlsx">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const templatesPerPage = 6; // Updated to show 6 templates per page
+  const templatesPerPage = 6;
   
-  const { templates, isLoading, uploadTemplate, deleteTemplate } = useTemplates();
+  const { templates, isLoading, deleteTemplate } = useTemplates();
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && (
-      file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-      file.name.endsWith('.xlsx') ||
-      file.name.endsWith('.docx')
-    )) {
-      setSelectedFile(file);
-    } else {
-      toast({
-        title: "Invalid File",
-        description: "Please select a .docx or .xlsx file",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!selectedFile) return;
-    
-    setUploadLoading(true);
-    try {
-      uploadTemplate(selectedFile);
-      setSelectedFile(null);
-      // Reset file input
-      const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
-    } catch (error) {
-      console.error('Upload failed:', error);
-    } finally {
-      setUploadLoading(false);
-    }
-  };
 
   const handleGeneratePDF = (templateId: string) => {
     navigate(`/templates/${templateId}/generate`);
@@ -308,64 +272,6 @@ const Templates = () => {
         ))}
       </div>
 
-      {/* Upload Section */}
-      <Card className="mb-6 lg:mb-8 border-0 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
-          <CardTitle className="flex items-center space-x-2 text-gray-800">
-            <Upload className="h-5 w-5 text-blue-600" />
-            <span>Upload New Template</span>
-          </CardTitle>
-          <CardDescription className="text-gray-600">
-            Upload a .docx or .xlsx file to create a new template
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 lg:p-6 space-y-4">
-          <div>
-            <Label htmlFor="file-upload" className="text-sm font-medium text-gray-700">Select DOCX or XLSX File</Label>
-            <Input
-              id="file-upload"
-              type="file"
-              accept=".docx,.xlsx"
-              onChange={handleFileSelect}
-              className="mt-1 border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors"
-            />
-          </div>
-          
-          {selectedFile && (
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-              <div className="flex items-center space-x-3">
-                {selectedFile.name.endsWith('.xlsx') ? (
-                  <FileSpreadsheet className="h-5 w-5 text-green-600" />
-                ) : (
-                  <FileText className="h-5 w-5 text-blue-600" />
-                )}
-                <div>
-                  <span className="text-sm font-medium text-gray-800">{selectedFile.name}</span>
-                  <Badge variant="outline" className="ml-2 bg-white">
-                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                  </Badge>
-                </div>
-              </div>
-              <Button
-                onClick={handleUpload}
-                disabled={uploadLoading}
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {uploadLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Upload
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Search, Filter and View Controls */}
       {templates.length > 0 && (
         <div className="mb-6 space-y-4">
@@ -470,7 +376,7 @@ const Templates = () => {
             </div>
           )}
           
-          {/* Updated Pagination */}
+          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center mt-8">
               <Pagination>

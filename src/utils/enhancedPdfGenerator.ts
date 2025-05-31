@@ -1,4 +1,3 @@
-
 import { Workbook } from 'exceljs';
 import { TemplateHandler, MimeType } from 'easy-template-x';
 import { Buffer } from 'buffer';
@@ -22,6 +21,7 @@ interface GenerationOptions {
   placeholderData: Record<string, PlaceholderValue>;
   placeholders: string[];
   format: 'pdf' | 'docx' | 'xlsx';
+  userId: string;
 }
 
 const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, PlaceholderValue>): Promise<Blob> => {
@@ -29,39 +29,23 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
   await workbook.xlsx.load(templateBuffer);
   
   workbook.worksheets.forEach(worksheet => {
-    // First pass: Calculate optimal column widths
-    const columnWidths: { [key: number]: number } = {};
-    
-    worksheet.eachRow((row) => {
-      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-        const content = cell.text || '';
-        const contentWidth = content.length * 1.2;
-        columnWidths[colNumber] = Math.max(columnWidths[colNumber] || 0, contentWidth);
-      });
-    });
-
-    // Apply calculated column widths
-    Object.entries(columnWidths).forEach(([col, width]) => {
-      const column = worksheet.getColumn(parseInt(col));
-      column.width = Math.min(Math.max(width, 10), 50); // Min 10, max 50
-    });
-
-    // Process content
+    // Process content WITHOUT changing any formatting or dimensions
     worksheet.eachRow((row) => {
       row.eachCell({ includeEmpty: true }, (cell) => {
         if (typeof cell.text === 'string') {
           let finalText = cell.text;
 
-          // Store original cell formatting
+          // Store ALL original cell properties
           const originalStyle = {
             font: cell.font ? { ...cell.font } : undefined,
             alignment: cell.alignment ? { ...cell.alignment } : undefined,
             border: cell.border ? { ...cell.border } : undefined,
             fill: cell.fill ? { ...cell.fill } : undefined,
             numFmt: cell.numFmt,
+            protection: cell.protection ? { ...cell.protection } : undefined
           };
 
-          // Replace placeholders
+          // Replace placeholders only
           Object.entries(data).forEach(([key, value]) => {
             const regex = new RegExp(`{{${key}}}`, 'g');
             const textValue = typeof value === 'string' ? value : '[Image not supported in Excel]';
@@ -69,26 +53,22 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
           });
 
           if (finalText !== cell.text) {
-            // Update cell value while preserving formatting
+            // Update cell value while preserving ALL formatting
             cell.value = finalText;
             
-            // Apply text wrapping and alignment
-            cell.alignment = {
-              ...(originalStyle.alignment || {}),
-              wrapText: true,
-              vertical: 'middle',
-              horizontal: 'left'
-            };
-            
-            // Restore original formatting
+            // Restore ALL original formatting exactly as it was
             if (originalStyle.font) cell.font = originalStyle.font;
+            if (originalStyle.alignment) cell.alignment = originalStyle.alignment;
             if (originalStyle.border) cell.border = originalStyle.border;
             if (originalStyle.fill) cell.fill = originalStyle.fill;
             if (originalStyle.numFmt) cell.numFmt = originalStyle.numFmt;
+            if (originalStyle.protection) cell.protection = originalStyle.protection;
           }
         }
       });
     });
+
+    // DO NOT modify column widths or row heights - keep original dimensions
   });
 
   const buffer = await workbook.xlsx.writeBuffer();
@@ -120,7 +100,7 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
         processedData[key] = {
           _type: 'image',
           source: imageBuffer,
-          format: MimeType.Png, // Use proper MIME type from library
+          format: MimeType.Png,
           width: 400,
           height: 300,
           altText: key
@@ -132,7 +112,6 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
   }
 
   try {
-    // Process template while preserving formatting
     const doc = await handler.process(new Blob([templateBuffer]), processedData);
     return new Blob([await doc.arrayBuffer()], {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -147,7 +126,8 @@ export const generateEnhancedPDF = async ({
   templateId,
   templateName, 
   placeholderData,
-  format 
+  format,
+  userId 
 }: GenerationOptions): Promise<void> => {
   try {
     console.log('Starting enhanced PDF generation with template ID:', templateId);
@@ -194,18 +174,67 @@ export const generateEnhancedPDF = async ({
     const baseFileName = templateName.replace(/\.[^/.]+$/, '');
     const timestamp = new Date().toISOString().split('T')[0];
     const fileName = `${baseFileName}_${timestamp}`;
+    const fullFileName = `${fileName}.${format}`;
+
+    // Upload to Supabase storage
+    const storagePath = `${userId}/${Date.now()}-${fullFileName}`;
+    const { error: uploadError } = await supabase.storage
+      .from('generated-pdfs')
+      .upload(storagePath, resultBlob);
+
+    if (uploadError) throw new Error(`Storage upload error: ${uploadError.message}`);
+
+    // Save metadata to database
+    const { data: generatedFile, error: insertError } = await supabase
+      .from('generated_pdfs')
+      .insert({
+        name: fullFileName,
+        user_id: userId,
+        template_id: templateId,
+        file_path: storagePath,
+        file_size: resultBlob.size,
+        placeholder_data: placeholderData,
+        generated_date: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (insertError) throw new Error(`Database insert error: ${insertError.message}`);
+
+    // Update template use count
+    await supabase
+      .from('templates')
+      .update({ 
+        use_count: (template.use_count || 0) + 1 
+      })
+      .eq('id', templateId);
+
+    // Log activity
+    await supabase
+      .from('activity_logs')
+      .insert({
+        user_id: userId,
+        action: `${format.toUpperCase()} Generated`,
+        resource_type: 'generated_file',
+        resource_id: generatedFile.id,
+        metadata: { 
+          template_name: template.name,
+          generated_name: fullFileName,
+          placeholders_filled: Object.keys(placeholderData).length
+        }
+      });
 
     // Trigger download
     const url = window.URL.createObjectURL(resultBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${fileName}.${format}`;
+    link.download = fullFileName;
     document.body.appendChild(link);
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
 
-    console.log('Document generated and download triggered successfully');
+    console.log('Document generated, saved to Supabase, and download triggered successfully');
 
   } catch (error) {
     console.error('Error generating document:', error);
