@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -8,12 +7,19 @@ export interface GeneratedPDF {
   id: string;
   name: string;
   file_path: string;
+  pdf_path?: string;
   template_id: string;
   generated_date: string;
   file_size: number | null;
-  placeholder_data: Record<string, any>;
+  placeholder_data: Record<string, string | number | boolean | null>;
   template_name?: string;
 }
+
+type DownloadError = {
+  message: string;
+  code?: string;
+  details?: string;
+};
 
 export function useGeneratedPDFs() {
   const { user } = useAuth();
@@ -44,29 +50,65 @@ export function useGeneratedPDFs() {
     enabled: !!user,
   });
 
-  const downloadPDF = async (pdfId: string) => {
+  const downloadPDF = async (pdfId: string, type: 'excel' | 'docx' | 'pdf' = 'pdf') => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to download files.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const pdf = generatedPDFs.find(p => p.id === pdfId);
-    if (!pdf) return;
+    if (!pdf) {
+      toast({
+        title: "File Not Found",
+        description: "The requested file could not be found.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
+      // Determine which file path to use based on type
+      let filePath = pdf.file_path;
+      let fileName = pdf.name;
+      
+      if (type === 'pdf' && pdf.pdf_path) {
+        filePath = pdf.pdf_path;
+        fileName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+      } else if (type === 'excel') {
+        fileName = fileName.endsWith('.xlsx') ? fileName : `${fileName}.xlsx`;
+      } else if (type === 'docx') {
+        fileName = fileName.endsWith('.docx') ? fileName : `${fileName}.docx`;
+      }
+
       const { data, error } = await supabase.storage
         .from('generated-pdfs')
-        .download(pdf.file_path);
+        .download(filePath);
 
       if (error) throw error;
 
+      // Create download link
       const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = pdf.name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       URL.revokeObjectURL(url);
-    } catch (error: any) {
+
+      toast({
+        title: "Download Started",
+        description: `Your ${type.toUpperCase()} file is being downloaded.`,
+      });
+    } catch (error) {
+      const downloadError = error as DownloadError;
       toast({
         title: "Download Failed",
-        description: error.message,
+        description: downloadError.message || "Failed to download the file. Please try again.",
         variant: "destructive",
       });
     }
@@ -99,7 +141,7 @@ export function useGeneratedPDFs() {
         description: "PDF has been deleted successfully.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error | DownloadError) => {
       toast({
         title: "Delete Failed",
         description: error.message,
@@ -111,7 +153,7 @@ export function useGeneratedPDFs() {
   return {
     generatedPDFs,
     isLoading,
-    downloadPDF,
+    downloadPDF: (pdfId: string, type: 'excel' | 'docx' | 'pdf') => downloadPDF(pdfId, type),
     deletePDF: deleteMutation.mutate,
     isDeleting: deleteMutation.isPending,
   };

@@ -1,189 +1,199 @@
+import { Workbook } from 'exceljs';
+import { TemplateHandler, MimeType } from 'easy-template-x';
+import { Buffer } from 'buffer';
 
-import jsPDF from 'jspdf';
-
-interface PDFGenerationOptions {
-  templateName: string;
-  placeholderData: Record<string, string>;
-  placeholders: string[];
+interface ImageData {
+  _type: 'image';
+  source: Buffer;
+  format: string;
+  width: number;
+  height: number;
+  altText?: string;
+  transparencyPercent?: number;
 }
 
-export const generateEnhancedPDF = ({ templateName, placeholderData, placeholders }: PDFGenerationOptions): Blob => {
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
-  });
+type PlaceholderValue = string | ImageData;
 
-  // Page dimensions
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 20;
-  const contentWidth = pageWidth - (margin * 2);
+interface GenerationOptions {
+  templateName: string;
+  placeholderData: Record<string, PlaceholderValue>;
+  placeholders: string[];
+  format: 'pdf' | 'docx' | 'xlsx';
+}
+
+const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, PlaceholderValue>): Promise<Blob> => {
+  const workbook = new Workbook();
+  await workbook.xlsx.load(templateBuffer);
   
-  let yPosition = margin;
-  const lineHeight = 7;
-  const sectionSpacing = 10;
-
-  // Helper function to add new page if needed
-  const checkPageOverflow = (requiredSpace: number) => {
-    if (yPosition + requiredSpace > pageHeight - margin) {
-      pdf.addPage();
-      yPosition = margin;
-    }
-  };
-
-  // Document Header
-  pdf.setFontSize(18);
-  pdf.setFont('helvetica', 'bold');
-  const headerText = templateName.replace('.docx', '').toUpperCase();
-  const headerWidth = pdf.getTextWidth(headerText);
-  pdf.text(headerText, (pageWidth - headerWidth) / 2, yPosition);
-  
-  yPosition += lineHeight * 2;
-  
-  // Add underline
-  pdf.setLineWidth(0.5);
-  pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-  yPosition += sectionSpacing;
-
-  // Document date
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'normal');
-  const dateText = `Generated on: ${new Date().toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  })}`;
-  const dateWidth = pdf.getTextWidth(dateText);
-  pdf.text(dateText, pageWidth - margin - dateWidth, yPosition);
-  yPosition += sectionSpacing * 2;
-
-  // Introduction
-  checkPageOverflow(lineHeight * 3);
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'normal');
-  
-  const introLines = [
-    'Dear Recipient,',
-    '',
-    `This document has been generated using the template "${templateName}".`,
-    'Please find below the information that has been filled in according to your requirements:'
-  ];
-
-  introLines.forEach(line => {
-    if (line === '') {
-      yPosition += lineHeight / 2;
-    } else {
-      checkPageOverflow(lineHeight);
-      pdf.text(line, margin, yPosition);
-      yPosition += lineHeight;
-    }
-  });
-
-  yPosition += sectionSpacing;
-
-  // Fields Section
-  if (placeholders.length > 0) {
-    checkPageOverflow(lineHeight * 2);
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Document Information', margin, yPosition);
-    yPosition += lineHeight * 1.5;
-
-    // Add line under section header
-    pdf.setLineWidth(0.3);
-    pdf.line(margin, yPosition, margin + 60, yPosition);
-    yPosition += sectionSpacing;
-
-    placeholders.forEach((placeholder, index) => {
-      const value = placeholderData[placeholder] || 'Not provided';
-      const isImage = value.startsWith('[Image:');
-      
-      checkPageOverflow(lineHeight * 3);
-
-      // Field label
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'bold');
-      const fieldLabel = placeholder.replace(/[_-]/g, ' ').toUpperCase() + ':';
-      pdf.text(fieldLabel, margin, yPosition);
-      yPosition += lineHeight;
-
-      // Field value
-      pdf.setFont('helvetica', 'normal');
-      if (isImage) {
-        pdf.setTextColor(100, 100, 100);
-        const imageInfo = value.match(/\[Image: (.+?) - (\d+)x(\d+)px\]/);
-        if (imageInfo) {
-          const [, filename, width, height] = imageInfo;
-          pdf.text(`📷 Image: ${filename}`, margin + 5, yPosition);
-          yPosition += lineHeight * 0.8;
-          pdf.setFontSize(9);
-          pdf.text(`   Dimensions: ${width} × ${height} pixels`, margin + 5, yPosition);
-        } else {
-          pdf.text(value, margin + 5, yPosition);
-        }
-        pdf.setTextColor(0, 0, 0);
-        pdf.setFontSize(11);
-      } else {
-        // Handle long text with word wrapping
-        const wrappedText = pdf.splitTextToSize(value, contentWidth - 10);
-        pdf.text(wrappedText, margin + 5, yPosition);
-        yPosition += (wrappedText.length * lineHeight * 0.8);
-      }
-
-      yPosition += sectionSpacing;
-
-      // Add separator line between fields
-      if (index < placeholders.length - 1) {
-        pdf.setLineWidth(0.1);
-        pdf.setDrawColor(200, 200, 200);
-        pdf.line(margin + 5, yPosition - 3, pageWidth - margin - 5, yPosition - 3);
-      }
+  workbook.worksheets.forEach(worksheet => {
+    // First pass: Calculate optimal column widths
+    const columnWidths: { [key: number]: number } = {};
+    
+    worksheet.eachRow((row) => {
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        const content = cell.text || '';
+        const contentWidth = content.length * 1.2;
+        columnWidths[colNumber] = Math.max(columnWidths[colNumber] || 0, contentWidth);
+      });
     });
+
+    // Apply calculated column widths
+    Object.entries(columnWidths).forEach(([col, width]) => {
+      const column = worksheet.getColumn(parseInt(col));
+      column.width = Math.min(Math.max(width, 10), 50); // Min 10, max 50
+    });
+
+    // Process content
+    worksheet.eachRow((row) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        if (typeof cell.text === 'string') {
+          let finalText = cell.text;
+
+          // Store original cell formatting
+          const originalStyle = {
+            font: cell.font ? { ...cell.font } : undefined,
+            alignment: cell.alignment ? { ...cell.alignment } : undefined,
+            border: cell.border ? { ...cell.border } : undefined,
+            fill: cell.fill ? { ...cell.fill } : undefined,
+            numFmt: cell.numFmt,
+          };
+
+          // Replace placeholders
+          Object.entries(data).forEach(([key, value]) => {
+            const regex = new RegExp(`{{${key}}}`, 'g');
+            const textValue = typeof value === 'string' ? value : '[Image not supported in Excel]';
+            finalText = finalText.replace(regex, textValue);
+          });
+
+          if (finalText !== cell.text) {
+            // Update cell value while preserving formatting
+            cell.value = finalText;
+            
+            // Apply text wrapping and alignment
+            cell.alignment = {
+              ...(originalStyle.alignment || {}),
+              wrapText: true,
+              vertical: 'middle',
+              horizontal: 'left'
+            };
+            
+            // Restore original formatting
+            if (originalStyle.font) cell.font = originalStyle.font;
+            if (originalStyle.border) cell.border = originalStyle.border;
+            if (originalStyle.fill) cell.fill = originalStyle.fill;
+            if (originalStyle.numFmt) cell.numFmt = originalStyle.numFmt;
+          }
+        }
+      });
+    });
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return new Blob([buffer], { 
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  });
+};
+
+const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, PlaceholderValue>): Promise<Blob> => {
+  const handler = new TemplateHandler();
+  
+  // Process the data to handle images
+  const processedData: Record<string, string | {
+    _type: 'image';
+    source: Buffer;
+    format: string;
+    width: number;
+    height: number;
+    altText?: string;
+  }> = {};
+  
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === 'string') {
+      if (value.startsWith('data:image')) {
+        // Convert base64 image to binary
+        const base64Data = value.replace(/^data:image\/\w+;base64,/, '');
+        const imageBuffer = Buffer.from(base64Data, 'base64');
+        
+        processedData[key] = {
+          _type: 'image',
+          source: imageBuffer,
+          format: MimeType.Png, // Use proper MIME type from library
+          width: 400,
+          height: 300,
+          altText: key
+        };
+      } else {
+        processedData[key] = value;
+      }
+    }
   }
 
-  // Closing section
-  yPosition += sectionSpacing;
-  checkPageOverflow(lineHeight * 6);
-  
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'normal');
-  
-  const closingLines = [
-    '',
-    'Thank you for your attention to this matter. Should you require any clarification',
-    'or additional information, please do not hesitate to contact us.',
-    '',
-    'Best regards,',
-    ''
-  ];
+  try {
+    // Process template while preserving formatting
+    const doc = await handler.process(new Blob([templateBuffer]), processedData);
+    return new Blob([await doc.arrayBuffer()], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+  } catch (error) {
+    console.error('Error processing Word template:', error);
+    throw error;
+  }
+};
 
-  closingLines.forEach(line => {
-    if (line === '') {
-      yPosition += lineHeight;
-    } else {
-      checkPageOverflow(lineHeight);
-      pdf.text(line, margin, yPosition);
-      yPosition += lineHeight;
+export const generateEnhancedPDF = async ({ 
+  templateName, 
+  placeholderData,
+  format 
+}: GenerationOptions): Promise<void> => {
+  try {
+    // Load the template file with proper headers
+    const response = await fetch(`/templates/${templateName}`, {
+      headers: {
+        'Content-Type': format === 'xlsx' 
+          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Cache-Control': 'no-cache'
+      }
+    });
+    
+    if (!response.ok) {
+      console.error('Template fetch error:', response.status, response.statusText);
+      throw new Error(`Failed to load template: ${response.statusText}`);
     }
-  });
+    
+    const templateBuffer = await response.arrayBuffer();
+    let resultBlob: Blob;
 
-  // Signature line
-  yPosition += lineHeight * 2;
-  checkPageOverflow(lineHeight * 3);
-  pdf.setLineWidth(0.5);
-  pdf.line(margin, yPosition, margin + 60, yPosition);
-  yPosition += lineHeight;
-  pdf.setFontSize(10);
-  pdf.text('Authorized Signature', margin, yPosition);
+    // Process based on format
+    switch (format) {
+      case 'xlsx':
+        resultBlob = await handleExcel(templateBuffer, placeholderData);
+        break;
+      case 'docx':
+      case 'pdf': // For now, handle PDF as DOCX
+        resultBlob = await handleWord(templateBuffer, placeholderData);
+        break;
+      default:
+        throw new Error(`Unsupported format: ${format}`);
+    }
 
-  // Footer
-  const footerY = pageHeight - 15;
-  pdf.setFontSize(8);
-  pdf.setTextColor(150, 150, 150);
-  const footerText = 'Generated by DocCraft • Document Management System';
-  const footerWidth = pdf.getTextWidth(footerText);
-  pdf.text(footerText, (pageWidth - footerWidth) / 2, footerY);
+    // Generate filename
+    const baseFileName = templateName.replace(/\.[^/.]+$/, '');
+    const timestamp = new Date().toISOString().split('T')[0];
+    const fileName = `${baseFileName}_${timestamp}`;
 
-  return pdf.output('blob');
+    // Trigger download
+    const url = window.URL.createObjectURL(resultBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${fileName}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+  } catch (error) {
+    console.error('Error generating document:', error);
+    throw error;
+  }
 };

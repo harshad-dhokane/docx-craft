@@ -1,5 +1,3 @@
-
-
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,13 +17,14 @@ import { Download, FileText, Trash2, Calendar, HardDrive, Activity, TrendingUp, 
 import { useGeneratedPDFs } from "@/hooks/useGeneratedPDFs";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useMemo } from "react";
+import { GeneratedPDF } from '@/hooks/useGeneratedPDFs';
 
-// Helper functions moved outside component to be accessible to child components
+// Helper functions
 const formatFileSize = (bytes: number | null) => {
   if (!bytes) return 'Unknown size';
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  const index = Math.floor(Math.log(bytes) / Math.log(1024));
+  return Math.round(bytes / Math.pow(1024, index) * 100) / 100 + ' ' + sizes[index];
 };
 
 const getFileType = (fileName: string, filePath: string) => {
@@ -336,11 +335,13 @@ const CreatedFiles = () => {
   );
 };
 
-const FileCard = ({ pdf, downloadPDF, deletePDF }: { 
-  pdf: any; 
-  downloadPDF: (id: string) => void; 
-  deletePDF: (id: string) => void; 
-}) => {
+interface FileComponentProps {
+  pdf: GeneratedPDF;
+  downloadPDF: (id: string, type?: 'excel' | 'docx' | 'pdf') => void;
+  deletePDF: (id: string) => void;
+}
+
+const FileCard = ({ pdf, downloadPDF, deletePDF }: FileComponentProps) => {
   const fileType = getFileType(pdf.name, pdf.file_path);
   return (
     <Card className="hover:shadow-xl transition-all duration-300 border-0 shadow-md group">
@@ -396,33 +397,52 @@ const FileCard = ({ pdf, downloadPDF, deletePDF }: {
         )}
         
         <div className="flex space-x-2 pt-2">
-          <Button 
-            size="sm" 
-            className="flex-1 bg-blue-600 hover:bg-blue-700"
-            onClick={() => downloadPDF(pdf.id)}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Download
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-            onClick={() => deletePDF(pdf.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-2">
+            {fileType.type === 'Excel' ? (
+              <Button 
+                size="sm" 
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => downloadPDF(pdf.id, 'excel')}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Excel
+              </Button>
+            ) : (
+              <>
+                <Button 
+                  size="sm" 
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={() => downloadPDF(pdf.id, 'docx')}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  DOCX
+                </Button>
+                <Button 
+                  size="sm" 
+                  className="bg-red-600 hover:bg-red-700"
+                  onClick={() => downloadPDF(pdf.id, 'pdf')}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  PDF
+                </Button>
+              </>
+            )}
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+              onClick={() => deletePDF(pdf.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
   );
 };
 
-const FileListItem = ({ pdf, downloadPDF, deletePDF }: { 
-  pdf: any; 
-  downloadPDF: (id: string) => void; 
-  deletePDF: (id: string) => void; 
-}) => {
+const FileListItem = ({ pdf, downloadPDF, deletePDF }: FileComponentProps) => {
   const fileType = getFileType(pdf.name, pdf.file_path);
   return (
     <Card className="hover:shadow-lg transition-all duration-200 border-0 shadow-sm">
@@ -445,15 +465,36 @@ const FileListItem = ({ pdf, downloadPDF, deletePDF }: {
               {formatFileSize(pdf.file_size)}
             </div>
           </div>
-          <div className="flex space-x-2 ml-4">
-            <Button 
-              size="sm" 
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={() => downloadPDF(pdf.id)}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
+          <div className="flex gap-2 ml-4">
+            {fileType.type === 'Excel' ? (
+              <Button 
+                size="sm" 
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => downloadPDF(pdf.id, 'excel')}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Excel
+              </Button>
+            ) : (
+              <>
+                <Button 
+                  size="sm" 
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={() => downloadPDF(pdf.id, 'docx')}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  DOCX
+                </Button>
+                <Button 
+                  size="sm" 
+                  className="bg-red-600 hover:bg-red-700"
+                  onClick={() => downloadPDF(pdf.id, 'pdf')}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  PDF
+                </Button>
+              </>
+            )}
             <Button 
               size="sm" 
               variant="outline"
