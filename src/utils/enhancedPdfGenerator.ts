@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface ImageData {
   _type: 'image';
   source: Buffer;
-  format: string;
+  format: MimeType;
   width: number;
   height: number;
   altText?: string;
@@ -25,26 +25,26 @@ interface GenerationOptions {
   userId: string;
 }
 
-// Helper function to convert base64 image to ImageData
+// Helper function to convert base64 image to ImageData with proper format
 const convertBase64ToImageData = async (base64String: string, altText: string = ''): Promise<ImageData> => {
   // Remove data URL prefix if present
   const base64Data = base64String.replace(/^data:image\/[a-z]+;base64,/, '');
   const buffer = Buffer.from(base64Data, 'base64');
   
-  // Determine format from the original string
-  let format = 'png';
+  // Determine format from the original string and use proper MimeType
+  let format = MimeType.Png;
   if (base64String.includes('data:image/jpeg') || base64String.includes('data:image/jpg')) {
-    format = 'jpeg';
+    format = MimeType.Jpeg;
   } else if (base64String.includes('data:image/gif')) {
-    format = 'gif';
+    format = MimeType.Gif;
   }
   
   return {
     _type: 'image',
     source: buffer,
     format: format,
-    width: 200, // Default width
-    height: 150, // Default height
+    width: 200,
+    height: 200,
     altText: altText
   };
 };
@@ -54,13 +54,11 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
   await workbook.xlsx.load(templateBuffer);
   
   workbook.worksheets.forEach(worksheet => {
-    // Process content WITHOUT changing any formatting or dimensions
     worksheet.eachRow((row) => {
       row.eachCell({ includeEmpty: true }, (cell) => {
         if (typeof cell.text === 'string') {
           let finalText = cell.text;
 
-          // Store ALL original cell properties
           const originalStyle = {
             font: cell.font ? { ...cell.font } : undefined,
             alignment: cell.alignment ? { ...cell.alignment } : undefined,
@@ -70,7 +68,6 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
             protection: cell.protection ? { ...cell.protection } : undefined
           };
 
-          // Replace placeholders only
           Object.entries(data).forEach(([key, value]) => {
             const regex = new RegExp(`{{${key}}}`, 'g');
             const textValue = typeof value === 'string' ? value : '[Image not supported in Excel]';
@@ -78,10 +75,8 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
           });
 
           if (finalText !== cell.text) {
-            // Update cell value while preserving ALL formatting
             cell.value = finalText;
             
-            // Restore ALL original formatting exactly as it was
             if (originalStyle.font) cell.font = originalStyle.font;
             if (originalStyle.alignment) cell.alignment = originalStyle.alignment;
             if (originalStyle.border) cell.border = originalStyle.border;
@@ -92,8 +87,6 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
         }
       });
     });
-
-    // DO NOT modify column widths or row heights - keep original dimensions
   });
 
   const buffer = await workbook.xlsx.writeBuffer();
@@ -105,7 +98,7 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
 const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, PlaceholderValue>): Promise<Blob> => {
   const handler = new TemplateHandler();
   
-  // Process the data to handle both text and image placeholders with proper typing
+  // Process the data with exact format required by easy-template-x
   const processedData: Record<string, any> = {};
   
   for (const [key, value] of Object.entries(data)) {
@@ -114,15 +107,20 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
       if (value.startsWith('data:image/')) {
         try {
           const imageData = await convertBase64ToImageData(value, key);
-          // Convert to the format expected by easy-template-x
+          // Use exact format as specified
           processedData[key] = {
             _type: 'image',
             source: imageData.source,
-            format: MimeType.Png, // Use the library's MimeType enum
-            altText: imageData.altText || key,
+            format: imageData.format,
+            width: imageData.width,
+            height: imageData.height,
+            altText: imageData.altText || key
+          };
+          console.log(`Processed image for ${key}:`, {
+            format: imageData.format,
             width: imageData.width,
             height: imageData.height
-          };
+          });
         } catch (error) {
           console.error(`Failed to process image for ${key}:`, error);
           processedData[key] = '[Image could not be processed]';
@@ -131,28 +129,31 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
         processedData[key] = value;
       }
     } else if (value && typeof value === 'object' && '_type' in value && value._type === 'image') {
-      // Handle ImageData objects
+      // Handle ImageData objects with proper format
       processedData[key] = {
         _type: 'image',
         source: value.source,
-        format: MimeType.Png,
-        altText: value.altText || key,
+        format: value.format || MimeType.Png,
         width: value.width,
-        height: value.height
+        height: value.height,
+        altText: value.altText || key
       };
     } else {
       processedData[key] = String(value || '');
     }
   }
 
+  console.log('Processing document with data keys:', Object.keys(processedData));
+
   try {
     const doc = await handler.process(templateBuffer, processedData);
+    console.log('Document processed successfully');
     return new Blob([doc], {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     });
   } catch (error) {
     console.error('Error processing Word template:', error);
-    throw error;
+    throw new Error(`Document processing failed: ${error.message}`);
   }
 };
 
@@ -165,6 +166,7 @@ export const generateEnhancedPDF = async ({
 }: GenerationOptions): Promise<void> => {
   try {
     console.log('Starting enhanced document generation with template ID:', templateId);
+    console.log('Placeholder data:', placeholderData);
     
     // Get template info from database
     const { data: template, error: templateError } = await supabase
@@ -173,7 +175,10 @@ export const generateEnhancedPDF = async ({
       .eq('id', templateId)
       .single();
 
-    if (templateError) throw new Error(`Template fetch error: ${templateError.message}`);
+    if (templateError) {
+      console.error('Template fetch error:', templateError);
+      throw new Error(`Template fetch error: ${templateError.message}`);
+    }
     if (!template) throw new Error('Template not found');
 
     console.log('Template found:', template.name, 'File path:', template.file_path);
@@ -183,7 +188,10 @@ export const generateEnhancedPDF = async ({
       .from('templates')
       .download(template.file_path);
 
-    if (fileError) throw new Error(`Template download error: ${fileError.message}`);
+    if (fileError) {
+      console.error('Template download error:', fileError);
+      throw new Error(`Template download error: ${fileError.message}`);
+    }
     if (!fileData) throw new Error('Template file is empty');
 
     console.log('Template file downloaded successfully');
@@ -194,15 +202,19 @@ export const generateEnhancedPDF = async ({
     // Process based on format
     switch (format) {
       case 'xlsx':
+        console.log('Processing Excel document...');
         resultBlob = await handleExcel(templateBuffer, placeholderData);
         break;
       case 'docx':
       case 'pdf': // For now, handle PDF as DOCX
+        console.log('Processing Word document...');
         resultBlob = await handleWord(templateBuffer, placeholderData);
         break;
       default:
         throw new Error(`Unsupported format: ${format}`);
     }
+
+    console.log('Document processed, blob size:', resultBlob.size);
 
     // Generate filename
     const baseFileName = templateName.replace(/\.[^/.]+$/, '');
@@ -212,11 +224,18 @@ export const generateEnhancedPDF = async ({
 
     // Upload to Supabase storage
     const storagePath = `${userId}/${Date.now()}-${fullFileName}`;
+    console.log('Uploading to storage path:', storagePath);
+    
     const { error: uploadError } = await supabase.storage
       .from('generated-pdfs')
       .upload(storagePath, resultBlob);
 
-    if (uploadError) throw new Error(`Storage upload error: ${uploadError.message}`);
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError);
+      throw new Error(`Storage upload error: ${uploadError.message}`);
+    }
+
+    console.log('File uploaded to storage successfully');
 
     // Convert placeholderData to JSON-compatible format
     const jsonPlaceholderData: Record<string, any> = {};
@@ -239,7 +258,12 @@ export const generateEnhancedPDF = async ({
       .select()
       .single();
 
-    if (insertError) throw new Error(`Database insert error: ${insertError.message}`);
+    if (insertError) {
+      console.error('Database insert error:', insertError);
+      throw new Error(`Database insert error: ${insertError.message}`);
+    }
+
+    console.log('Metadata saved to database successfully');
 
     // Update template use count
     await supabase
