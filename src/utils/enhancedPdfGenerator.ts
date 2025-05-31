@@ -105,15 +105,24 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
 const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, PlaceholderValue>): Promise<Blob> => {
   const handler = new TemplateHandler();
   
-  // Process the data to handle both text and image placeholders
-  const processedData: Record<string, string | ImageData> = {};
+  // Process the data to handle both text and image placeholders with proper typing
+  const processedData: Record<string, any> = {};
   
   for (const [key, value] of Object.entries(data)) {
     if (typeof value === 'string') {
       // Check if it's a base64 image
       if (value.startsWith('data:image/')) {
         try {
-          processedData[key] = await convertBase64ToImageData(value, key);
+          const imageData = await convertBase64ToImageData(value, key);
+          // Convert to the format expected by easy-template-x
+          processedData[key] = {
+            _type: 'image',
+            source: imageData.source,
+            format: MimeType.Png, // Use the library's MimeType enum
+            altText: imageData.altText || key,
+            width: imageData.width,
+            height: imageData.height
+          };
         } catch (error) {
           console.error(`Failed to process image for ${key}:`, error);
           processedData[key] = '[Image could not be processed]';
@@ -121,8 +130,18 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
       } else {
         processedData[key] = value;
       }
+    } else if (value && typeof value === 'object' && '_type' in value && value._type === 'image') {
+      // Handle ImageData objects
+      processedData[key] = {
+        _type: 'image',
+        source: value.source,
+        format: MimeType.Png,
+        altText: value.altText || key,
+        width: value.width,
+        height: value.height
+      };
     } else {
-      processedData[key] = value;
+      processedData[key] = String(value || '');
     }
   }
 
