@@ -1,3 +1,4 @@
+
 import { Workbook } from 'exceljs';
 import { TemplateHandler, MimeType } from 'easy-template-x';
 import { Buffer } from 'buffer';
@@ -23,6 +24,30 @@ interface GenerationOptions {
   format: 'pdf' | 'docx' | 'xlsx';
   userId: string;
 }
+
+// Helper function to convert base64 image to ImageData
+const convertBase64ToImageData = async (base64String: string, altText: string = ''): Promise<ImageData> => {
+  // Remove data URL prefix if present
+  const base64Data = base64String.replace(/^data:image\/[a-z]+;base64,/, '');
+  const buffer = Buffer.from(base64Data, 'base64');
+  
+  // Determine format from the original string
+  let format = 'png';
+  if (base64String.includes('data:image/jpeg') || base64String.includes('data:image/jpg')) {
+    format = 'jpeg';
+  } else if (base64String.includes('data:image/gif')) {
+    format = 'gif';
+  }
+  
+  return {
+    _type: 'image',
+    source: buffer,
+    format: format,
+    width: 200, // Default width
+    height: 150, // Default height
+    altText: altText
+  };
+};
 
 const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, PlaceholderValue>): Promise<Blob> => {
   const workbook = new Workbook();
@@ -80,11 +105,23 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
 const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, PlaceholderValue>): Promise<Blob> => {
   const handler = new TemplateHandler();
   
-  // Process the data to handle text placeholders
-  const processedData: Record<string, string> = {};
+  // Process the data to handle both text and image placeholders
+  const processedData: Record<string, string | ImageData> = {};
   
   for (const [key, value] of Object.entries(data)) {
     if (typeof value === 'string') {
+      // Check if it's a base64 image
+      if (value.startsWith('data:image/')) {
+        try {
+          processedData[key] = await convertBase64ToImageData(value, key);
+        } catch (error) {
+          console.error(`Failed to process image for ${key}:`, error);
+          processedData[key] = '[Image could not be processed]';
+        }
+      } else {
+        processedData[key] = value;
+      }
+    } else {
       processedData[key] = value;
     }
   }
@@ -108,7 +145,7 @@ export const generateEnhancedPDF = async ({
   userId 
 }: GenerationOptions): Promise<void> => {
   try {
-    console.log('Starting enhanced PDF generation with template ID:', templateId);
+    console.log('Starting enhanced document generation with template ID:', templateId);
     
     // Get template info from database
     const { data: template, error: templateError } = await supabase

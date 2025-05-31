@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, FileText, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, FileText, Download, Loader2, CheckCircle } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import EnhancedFieldTypeSelector from "@/components/form/EnhancedFieldTypeSelector";
 import { useTemplates } from "@/hooks/useTemplates";
@@ -24,6 +24,7 @@ const TemplateGenerator = () => {
   const [placeholderData, setPlaceholderData] = useState<Record<string, string>>({});
   const [pdfName, setPdfName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
 
   const template = templates.find(t => t.id === templateId);
 
@@ -71,15 +72,17 @@ const TemplateGenerator = () => {
         userId: user.id
       });
 
+      setDownloadSuccess(true);
       toast({
         title: "Success",
-        description: `Your ${format.toUpperCase()} document has been generated and saved successfully.`,
+        description: `Your ${format.toUpperCase()} document has been generated and downloaded successfully.`,
       });
 
-      // Navigate to created files after successful generation
+      // Reset success state after 3 seconds
       setTimeout(() => {
-        navigate('/generated-pdfs');
-      }, 2000);
+        setDownloadSuccess(false);
+      }, 3000);
+
     } catch (error) {
       console.error('Generation error:', error);
       toast({
@@ -92,7 +95,7 @@ const TemplateGenerator = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto p-6 max-w-5xl">
+      <div className="container mx-auto p-6 max-w-6xl">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
@@ -126,75 +129,105 @@ const TemplateGenerator = () => {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
-                    Fill in Template Data
+                    Generate Document from Template
                   </CardTitle>
                   <CardDescription>
-                    Fill in the template data for "{template.name}"
+                    Fill in the data for "{template.name}" and generate your document
                   </CardDescription>
                 </div>
 
-                {/* Document Name Input */}
-                <div>
-                  <Label htmlFor="pdfName">Document Name</Label>
-                  <div className="flex gap-4">
-                    <Input
-                      id="pdfName"
-                      value={pdfName}
-                      onChange={(e) => setPdfName(e.target.value)}
-                      placeholder="Enter document name"
-                      className="max-w-md"
-                    />
-                    <div className="flex gap-2">
-                      {template.name.endsWith('.xlsx') ? (
+                {/* Document Name and Download Section */}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="pdfName" className="text-base font-semibold">Document Name</Label>
+                    <div className="mt-2">
+                      <Input
+                        id="pdfName"
+                        value={pdfName}
+                        onChange={(e) => setPdfName(e.target.value)}
+                        placeholder="Enter document name"
+                        className="max-w-md"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-3">
+                    {template.name.endsWith('.xlsx') ? (
+                      <Button
+                        onClick={() => handleGenerateDocument('xlsx')}
+                        disabled={isGenerating}
+                        size="default"
+                        className="min-w-[140px]"
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Generating...
+                          </>
+                        ) : downloadSuccess ? (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Downloaded!
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-4 w-4 mr-2" />
+                            Download Excel
+                          </>
+                        )}
+                      </Button>
+                    ) : (
+                      <>
                         <Button
-                          onClick={() => handleGenerateDocument('xlsx')}
+                          onClick={() => handleGenerateDocument('pdf')}
                           disabled={isGenerating}
                           size="default"
+                          variant="default"
+                          className="min-w-[140px]"
                         >
                           {isGenerating ? (
-                            "Generating..."
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Generating...
+                            </>
+                          ) : downloadSuccess ? (
+                            <>
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Downloaded!
+                            </>
                           ) : (
                             <>
                               <Download className="h-4 w-4 mr-2" />
-                              Download Excel
+                              Download PDF
                             </>
                           )}
                         </Button>
-                      ) : (
-                        <>
-                          <Button
-                            onClick={() => handleGenerateDocument('pdf')}
-                            disabled={isGenerating}
-                            size="default"
-                            variant="default"
-                          >
-                            {isGenerating ? (
-                              "Generating..."
-                            ) : (
-                              <>
-                                <Download className="h-4 w-4 mr-2" />
-                                Download PDF
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            onClick={() => handleGenerateDocument('docx')}
-                            disabled={isGenerating}
-                            size="default"
-                            variant="secondary"
-                          >
-                            {isGenerating ? (
-                              "Generating..."
-                            ) : (
-                              <>
-                                <Download className="h-4 w-4 mr-2" />
-                                Download DOCX
-                              </>
-                            )}
-                          </Button>
-                        </>
-                      )}
-                    </div>
+                        <Button
+                          onClick={() => handleGenerateDocument('docx')}
+                          disabled={isGenerating}
+                          size="default"
+                          variant="secondary"
+                          className="min-w-[140px]"
+                        >
+                          {isGenerating ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Generating...
+                            </>
+                          ) : downloadSuccess ? (
+                            <>
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Downloaded!
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-4 w-4 mr-2" />
+                              Download DOCX
+                            </>
+                          )}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -202,19 +235,21 @@ const TemplateGenerator = () => {
               {template.placeholders && template.placeholders.length > 0 && (
                 <CardContent>
                   <Separator className="mb-6" />
+                  <div className="space-y-1 mb-4">
+                    <h3 className="text-lg font-semibold">Fill Template Data</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Complete the fields below to populate your document
+                    </p>
+                  </div>
                   <ScrollArea className="h-96">
                     <div className="space-y-4 pr-4">
                       {template.placeholders.map((placeholder: string) => (
-                        <div key={placeholder} className="space-y-2">
-                          <Label htmlFor={placeholder} className="font-medium">
-                            {placeholder}
-                          </Label>
-                          <EnhancedFieldTypeSelector
-                            placeholder={placeholder}
-                            value={placeholderData[placeholder] || ""}
-                            onChange={(value) => handleInputChange(placeholder, value)}
-                          />
-                        </div>
+                        <EnhancedFieldTypeSelector
+                          key={placeholder}
+                          placeholder={placeholder}
+                          value={placeholderData[placeholder] || ""}
+                          onChange={(value) => handleInputChange(placeholder, value)}
+                        />
                       ))}
                     </div>
                   </ScrollArea>
