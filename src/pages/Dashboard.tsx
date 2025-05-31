@@ -1,4 +1,3 @@
-
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,7 @@ const Dashboard = () => {
   };
 
   const handleDownloadPDF = (pdfId: string) => {
-    downloadPDF(pdfId);
+    downloadPDF(pdfId, 'pdf');
   };
 
   if (templatesLoading || pdfsLoading) {
