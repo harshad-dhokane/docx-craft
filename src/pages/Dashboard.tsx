@@ -1,3 +1,4 @@
+
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -141,33 +142,38 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {templates.slice(0, 5).map((template) => (
-                    <div
-                      key={template.id}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <FileText className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium text-gray-900 text-sm lg:text-base">{template.name}</h3>
-                          <div className="flex items-center space-x-2 text-xs lg:text-sm text-gray-500">
-                            <span>Used {template.use_count} times</span>
-                            <span>•</span>
-                            <span>{template.placeholders.length} fields</span>
+                  {templates.slice(0, 5).map((template) => {
+                    // Safely get placeholders count with proper type checking
+                    const placeholdersCount = Array.isArray(template.placeholders) ? template.placeholders.length : 0;
+                    
+                    return (
+                      <div
+                        key={template.id}
+                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-gray-900 text-sm lg:text-base">{template.name}</h3>
+                            <div className="flex items-center space-x-2 text-xs lg:text-sm text-gray-500">
+                              <span>Used {template.use_count} times</span>
+                              <span>•</span>
+                              <span>{placeholdersCount} fields</span>
+                            </div>
                           </div>
                         </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleUseTemplate(template.id)}
+                        >
+                          Use
+                        </Button>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleUseTemplate(template.id)}
-                      >
-                        Use
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {templates.length > 5 && (
                     <div className="text-center pt-2">
                       <Link to="/templates">
