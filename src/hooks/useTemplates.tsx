@@ -1,11 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useToast } from "./use-toast";
 import { Workbook } from 'exceljs';
-import { TemplateHandler } from 'easy-template-x';
 
 const extractPlaceholders = async (file: File): Promise<string[]> => {
   const placeholders = new Set<string>();
@@ -21,50 +19,55 @@ const extractPlaceholders = async (file: File): Promise<string[]> => {
       
       workbook.worksheets.forEach(worksheet => {
         console.log('Processing worksheet:', worksheet.name);
-        worksheet.eachRow((row) => {
+        worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
           if (!row) return;
           
-          row.eachCell({ includeEmpty: true }, (cell) => {
-            if (!cell || cell.value === null || cell.value === undefined) return;
+          row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+            if (!cell || !cell.value) return;
             
-            let cellText = '';
-            
-            // Safely handle different cell value types
             try {
+              let cellText = '';
+              
+              // Handle different cell value types more safely
               if (typeof cell.value === 'string') {
                 cellText = cell.value;
               } else if (typeof cell.value === 'number') {
                 cellText = cell.value.toString();
               } else if (cell.value && typeof cell.value === 'object') {
-                // Handle rich text and formula objects
-                if ('text' in cell.value && typeof cell.value.text === 'string') {
-                  cellText = cell.value.text;
+                // Handle rich text, formulas, and other complex objects
+                if ('text' in cell.value && cell.value.text) {
+                  cellText = String(cell.value.text);
                 } else if ('richText' in cell.value && Array.isArray(cell.value.richText)) {
-                  cellText = cell.value.richText.map((rt: any) => rt.text || '').join('');
-                } else if ('result' in cell.value) {
-                  cellText = String(cell.value.result || '');
+                  cellText = cell.value.richText
+                    .map((rt: any) => (rt && rt.text) ? String(rt.text) : '')
+                    .join('');
+                } else if ('result' in cell.value && cell.value.result !== null) {
+                  cellText = String(cell.value.result);
+                } else if ('formula' in cell.value && cell.value.formula) {
+                  cellText = String(cell.value.formula);
                 }
               }
               
-              // Fallback to cell.text if available
+              // Fallback to cell.text if available and cellText is still empty
               if (!cellText && cell.text) {
                 cellText = String(cell.text);
               }
               
+              // Extract placeholders using regex
               if (cellText) {
                 const matches = cellText.match(/\{\{([^}]+)\}\}/g);
                 if (matches) {
                   matches.forEach(match => {
                     const placeholder = match.replace(/[{}]/g, '').trim();
-                    if (placeholder) {
+                    if (placeholder && placeholder.length > 0) {
                       placeholders.add(placeholder);
-                      console.log('Found placeholder:', placeholder);
+                      console.log('Found placeholder:', placeholder, 'at row', rowNumber, 'col', colNumber);
                     }
                   });
                 }
               }
             } catch (cellError) {
-              console.warn('Error processing cell:', cellError);
+              console.warn('Error processing cell at row', rowNumber, 'col', colNumber, ':', cellError);
               // Continue processing other cells
             }
           });
@@ -74,16 +77,32 @@ const extractPlaceholders = async (file: File): Promise<string[]> => {
       console.log('Processing Word file...');
       const arrayBuffer = await file.arrayBuffer();
       
-      // Simple text extraction approach for DOCX
+      // Convert ArrayBuffer to Uint8Array for text extraction
       const uint8Array = new Uint8Array(arrayBuffer);
-      const textContent = new TextDecoder('utf-8', { ignoreBOM: true, fatal: false }).decode(uint8Array);
+      
+      // Try to extract text content - this is a simple approach
+      // Convert bytes to string, ignoring non-text content
+      let textContent = '';
+      
+      // Look for readable text patterns in the binary data
+      for (let i = 0; i < uint8Array.length - 1; i++) {
+        const byte = uint8Array[i];
+        // Include printable ASCII characters and common Unicode ranges
+        if ((byte >= 32 && byte <= 126) || byte === 10 || byte === 13) {
+          textContent += String.fromCharCode(byte);
+        } else if (byte === 0) {
+          textContent += ' '; // Replace null bytes with spaces
+        }
+      }
+      
+      console.log('Extracted text content length:', textContent.length);
       
       // Extract placeholders using regex
       const matches = textContent.match(/\{\{([^}]+)\}\}/g);
       if (matches) {
         matches.forEach(match => {
           const placeholder = match.replace(/[{}]/g, '').trim();
-          if (placeholder) {
+          if (placeholder && placeholder.length > 0) {
             placeholders.add(placeholder);
             console.log('Found placeholder:', placeholder);
           }
@@ -97,8 +116,10 @@ const extractPlaceholders = async (file: File): Promise<string[]> => {
     
   } catch (error) {
     console.error('Error extracting placeholders:', error);
-    console.error('Error details:', error.message, error.stack);
-    // Return empty array instead of throwing to prevent upload failure
+    console.error('Error details:', error?.message || 'Unknown error');
+    
+    // Return empty array on error to prevent upload failure
+    console.log('Returning empty placeholders array due to extraction error');
     return [];
   }
 };
@@ -135,18 +156,31 @@ export const useTemplates = () => {
 
       console.log('Starting template upload for file:', file.name);
       
+      // Validate file type
+      const isValidType = file.name.endsWith('.docx') || 
+                         file.name.endsWith('.xlsx') ||
+                         file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                         file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      
+      if (!isValidType) {
+        throw new Error('Invalid file type. Please upload a .docx or .xlsx file.');
+      }
+      
       // Extract placeholders with improved error handling
       let placeholders: string[] = [];
       try {
+        console.log('Extracting placeholders...');
         placeholders = await extractPlaceholders(file);
-        console.log('Extracted placeholders:', placeholders);
+        console.log('Successfully extracted placeholders:', placeholders);
       } catch (extractError) {
         console.error('Placeholder extraction failed:', extractError);
-        // Continue with empty placeholders array
+        // Continue with empty placeholders instead of failing
         placeholders = [];
+        console.log('Continuing with empty placeholders due to extraction error');
       }
 
       // Upload file to Supabase storage
+      console.log('Uploading file to storage...');
       const fileName = `${Date.now()}-${file.name}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('templates')
@@ -154,12 +188,13 @@ export const useTemplates = () => {
 
       if (uploadError) {
         console.error('Upload error:', uploadError);
-        throw uploadError;
+        throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
       console.log('File uploaded to storage:', uploadData.path);
 
       // Save template metadata to database
+      console.log('Saving template metadata...');
       const { data: template, error: insertError } = await supabase
         .from('templates')
         .insert({
@@ -174,17 +209,20 @@ export const useTemplates = () => {
 
       if (insertError) {
         console.error('Database insert error:', insertError);
-        throw insertError;
+        // Try to clean up uploaded file
+        await supabase.storage.from('templates').remove([uploadData.path]);
+        throw new Error(`Database error: ${insertError.message}`);
       }
 
-      console.log('Template metadata saved to database:', template);
+      console.log('Template metadata saved successfully:', template);
       return template;
     },
-    onSuccess: () => {
+    onSuccess: (template) => {
       queryClient.invalidateQueries({ queryKey: ['templates'] });
+      console.log('Template upload completed successfully:', template.name);
       toast({
         title: "Success",
-        description: "Template uploaded successfully!",
+        description: `Template "${template.name}" uploaded successfully!`,
       });
     },
     onError: (error) => {
