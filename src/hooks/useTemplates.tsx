@@ -176,10 +176,70 @@ export const useTemplates = () => {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      if (!user) throw new Error('No user logged in');
+
+      // First get the template to find the file path
+      const { data: template, error: fetchError } = await supabase
+        .from('templates')
+        .select('file_path')
+        .eq('id', templateId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching template:', fetchError);
+        throw fetchError;
+      }
+
+      // Delete the file from storage
+      const { error: storageError } = await supabase.storage
+        .from('templates')
+        .remove([template.file_path]);
+
+      if (storageError) {
+        console.error('Error deleting file from storage:', storageError);
+        // Continue with database deletion even if storage deletion fails
+      }
+
+      // Delete the template record from database
+      const { error: deleteError } = await supabase
+        .from('templates')
+        .delete()
+        .eq('id', templateId)
+        .eq('user_id', user.id);
+
+      if (deleteError) {
+        console.error('Error deleting template from database:', deleteError);
+        throw deleteError;
+      }
+
+      return templateId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['templates'] });
+      toast({
+        title: "Success",
+        description: "Template deleted successfully!",
+      });
+    },
+    onError: (error) => {
+      console.error('Delete failed:', error);
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete template. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     templates,
     isLoading,
     uploadTemplate: uploadMutation.mutateAsync,
     isUploading: uploadMutation.isPending,
+    deleteTemplate: deleteMutation.mutateAsync,
+    isDeleting: deleteMutation.isPending,
   };
 };

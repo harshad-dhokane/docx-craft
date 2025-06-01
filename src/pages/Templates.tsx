@@ -37,6 +37,14 @@ const Templates = () => {
     navigate(`/templates/${templateId}/generate`);
   };
 
+  const handleDeleteTemplate = async (templateId: string) => {
+    try {
+      await deleteTemplate(templateId);
+    } catch (error) {
+      console.error('Failed to delete template:', error);
+    }
+  };
+
   // Filter and search templates
   const filteredTemplates = useMemo(() => {
     let filtered = templates;
@@ -104,117 +112,71 @@ const Templates = () => {
     },
   ];
 
-  const TemplateCard = ({ template }: { template: any }) => (
-    <Card key={template.id} className="hover:shadow-xl transition-all duration-300 border-0 shadow-md group">
-      <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-lg">
-        <CardTitle className="flex items-center justify-between">
-          <span className="truncate text-gray-800">{template.name}</span>
-          {template.name.endsWith('.xlsx') ? (
-            <FileSpreadsheet className="h-5 w-5 text-green-600 flex-shrink-0" />
-          ) : (
-            <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          )}
-        </CardTitle>
-        <CardDescription className="text-gray-600">
-          Uploaded {new Date(template.upload_date).toLocaleDateString()}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-4 lg:p-6 space-y-4">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center text-gray-600">
-            <Activity className="h-4 w-4 mr-2 text-green-500" />
-            <span>Used {template.use_count || 0} times</span>
-          </div>
-          <div className="flex items-center text-gray-600">
+  const TemplateCard = ({ template }: { template: any }) => {
+    // Properly handle placeholders as Json type
+    const placeholders = Array.isArray(template.placeholders) ? template.placeholders : [];
+    const stringPlaceholders = placeholders.filter((p): p is string => typeof p === 'string');
+
+    return (
+      <Card key={template.id} className="hover:shadow-xl transition-all duration-300 border-0 shadow-md group">
+        <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-lg">
+          <CardTitle className="flex items-center justify-between">
+            <span className="truncate text-gray-800">{template.name}</span>
             {template.name.endsWith('.xlsx') ? (
-              <FileSpreadsheet className="h-4 w-4 mr-2 text-green-500" />
+              <FileSpreadsheet className="h-5 w-5 text-green-600 flex-shrink-0" />
             ) : (
-              <FileText className="h-4 w-4 mr-2 text-blue-500" />
+              <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
             )}
-            <span>{template.file_size ? (template.file_size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown'}</span>
-          </div>
-        </div>
-        
-        {template.placeholders && template.placeholders.length > 0 && (
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">Placeholders:</p>
-            <div className="flex flex-wrap gap-1">
-              {template.placeholders.slice(0, 3).map((placeholder: string, index: number) => (
-                <Badge key={index} variant="secondary" className="text-xs bg-blue-100 text-blue-700">
-                  {placeholder}
-                </Badge>
-              ))}
-              {template.placeholders.length > 3 && (
-                <Badge variant="outline" className="text-xs">
-                  +{template.placeholders.length - 3} more
-                </Badge>
-              )}
+          </CardTitle>
+          <CardDescription className="text-gray-600">
+            Uploaded {new Date(template.upload_date).toLocaleDateString()}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 lg:p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="flex items-center text-gray-600">
+              <Activity className="h-4 w-4 mr-2 text-green-500" />
+              <span>Used {template.use_count || 0} times</span>
             </div>
-          </div>
-        )}
-
-        <div className="flex space-x-2 pt-2">
-          <Button
-            onClick={() => handleGeneratePDF(template.id)}
-            size="sm"
-            className="flex-1 bg-blue-600 hover:bg-blue-700"
-          >
-            <Eye className="h-4 w-4 mr-1" />
-            Generate
-          </Button>
-          <Button
-            onClick={() => deleteTemplate(template.id)}
-            variant="outline"
-            size="sm"
-            className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  const TemplateListItem = ({ template }: { template: any }) => (
-    <Card key={template.id} className="hover:shadow-lg transition-all duration-200 border-0 shadow-sm">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4 flex-1">
-            <div className="flex-shrink-0">
+            <div className="flex items-center text-gray-600">
               {template.name.endsWith('.xlsx') ? (
-                <FileSpreadsheet className="h-8 w-8 text-green-600" />
+                <FileSpreadsheet className="h-4 w-4 mr-2 text-green-500" />
               ) : (
-                <FileText className="h-8 w-8 text-blue-600" />
+                <FileText className="h-4 w-4 mr-2 text-blue-500" />
               )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900 truncate">{template.name}</h3>
-              <p className="text-sm text-gray-500">
-                Uploaded {new Date(template.upload_date).toLocaleDateString()} • Used {template.use_count || 0} times
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              {template.placeholders && template.placeholders.length > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {template.placeholders.length} placeholders
-                </Badge>
-              )}
-              <span className="text-sm text-gray-500">
-                {template.file_size ? (template.file_size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown'}
-              </span>
+              <span>{template.file_size ? (template.file_size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown'}</span>
             </div>
           </div>
-          <div className="flex space-x-2 ml-4">
+          
+          {stringPlaceholders.length > 0 && (
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Placeholders:</p>
+              <div className="flex flex-wrap gap-1">
+                {stringPlaceholders.slice(0, 3).map((placeholder: string, index: number) => (
+                  <Badge key={index} variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                    {placeholder}
+                  </Badge>
+                ))}
+                {stringPlaceholders.length > 3 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{stringPlaceholders.length - 3} more
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="flex space-x-2 pt-2">
             <Button
               onClick={() => handleGeneratePDF(template.id)}
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700"
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
               <Eye className="h-4 w-4 mr-1" />
               Generate
             </Button>
             <Button
-              onClick={() => deleteTemplate(template.id)}
+              onClick={() => handleDeleteTemplate(template.id)}
               variant="outline"
               size="sm"
               className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
@@ -222,10 +184,68 @@ const Templates = () => {
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const TemplateListItem = ({ template }: { template: any }) => {
+    // Properly handle placeholders as Json type
+    const placeholders = Array.isArray(template.placeholders) ? template.placeholders : [];
+    const stringPlaceholders = placeholders.filter((p): p is string => typeof p === 'string');
+
+    return (
+      <Card key={template.id} className="hover:shadow-lg transition-all duration-200 border-0 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4 flex-1">
+              <div className="flex-shrink-0">
+                {template.name.endsWith('.xlsx') ? (
+                  <FileSpreadsheet className="h-8 w-8 text-green-600" />
+                ) : (
+                  <FileText className="h-8 w-8 text-blue-600" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-gray-900 truncate">{template.name}</h3>
+                <p className="text-sm text-gray-500">
+                  Uploaded {new Date(template.upload_date).toLocaleDateString()} • Used {template.use_count || 0} times
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                {stringPlaceholders.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {stringPlaceholders.length} placeholders
+                  </Badge>
+                )}
+                <span className="text-sm text-gray-500">
+                  {template.file_size ? (template.file_size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown'}
+                </span>
+              </div>
+            </div>
+            <div className="flex space-x-2 ml-4">
+              <Button
+                onClick={() => handleGeneratePDF(template.id)}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                Generate
+              </Button>
+              <Button
+                onClick={() => handleDeleteTemplate(template.id)}
+                variant="outline"
+                size="sm"
+                className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (isLoading) {
     return (

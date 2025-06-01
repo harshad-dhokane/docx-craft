@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,14 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, FileText, Download, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import ImprovedFieldTypeSelector from "@/components/form/ImprovedFieldTypeSelector";
 import CompactFieldTypeSelector from "@/components/form/CompactFieldTypeSelector";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { generateEnhancedPDF } from "@/utils/enhancedPdfGenerator";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const TemplateGenerator = () => {
@@ -39,10 +37,13 @@ const TemplateGenerator = () => {
 
   useEffect(() => {
     if (template) {
-      // Initialize placeholder data
+      // Initialize placeholder data - properly handle Json type
       const initialData: Record<string, string> = {};
-      template.placeholders?.forEach((placeholder: string) => {
-        initialData[placeholder] = "";
+      const placeholders = Array.isArray(template.placeholders) ? template.placeholders : [];
+      placeholders.forEach((placeholder: any) => {
+        if (typeof placeholder === 'string') {
+          initialData[placeholder] = "";
+        }
       });
       setPlaceholderData(initialData);
       
@@ -81,11 +82,16 @@ const TemplateGenerator = () => {
     });
 
     try {
+      // Convert Json placeholders to string array
+      const placeholders = Array.isArray(template.placeholders) 
+        ? template.placeholders.filter((p): p is string => typeof p === 'string')
+        : [];
+
       await generateEnhancedPDF({
         templateId: templateId,
         templateName: template.name,
         placeholderData,
-        placeholders: template.placeholders || [],
+        placeholders,
         format,
         userId: user.id
       });
@@ -115,10 +121,11 @@ const TemplateGenerator = () => {
     }
   };
 
-  // Check if all required fields are filled
-  const hasRequiredData = template?.placeholders?.some(placeholder => 
-    placeholderData[placeholder]?.trim()
-  ) ?? false;
+  // Check if all required fields are filled - properly handle Json type
+  const templatePlaceholders = Array.isArray(template?.placeholders) ? template.placeholders : [];
+  const hasRequiredData = templatePlaceholders.some((placeholder: any) => 
+    typeof placeholder === 'string' && placeholderData[placeholder]?.trim()
+  );
 
   return (
     <DashboardLayout>
@@ -273,24 +280,29 @@ const TemplateGenerator = () => {
             </Card>
 
             {/* Template Data Form */}
-            {template.placeholders && template.placeholders.length > 0 && (
+            {templatePlaceholders.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Template Data</CardTitle>
                   <CardDescription>
-                    Complete the fields below to populate your document ({template.placeholders.length} fields)
+                    Complete the fields below to populate your document ({templatePlaceholders.length} fields)
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {template.placeholders.map((placeholder: string) => (
-                      <CompactFieldTypeSelector
-                        key={placeholder}
-                        placeholder={placeholder}
-                        value={placeholderData[placeholder] || ""}
-                        onChange={(value) => handleInputChange(placeholder, value)}
-                      />
-                    ))}
+                    {templatePlaceholders.map((placeholder: any) => {
+                      if (typeof placeholder === 'string') {
+                        return (
+                          <CompactFieldTypeSelector
+                            key={placeholder}
+                            placeholder={placeholder}
+                            value={placeholderData[placeholder] || ""}
+                            onChange={(value) => handleInputChange(placeholder, value)}
+                          />
+                        );
+                      }
+                      return null;
+                    })}
                   </div>
                 </CardContent>
               </Card>
