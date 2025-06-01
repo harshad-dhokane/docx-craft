@@ -60,8 +60,19 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
   workbook.worksheets.forEach(worksheet => {
     worksheet.eachRow((row) => {
       row.eachCell({ includeEmpty: true }, (cell) => {
-        if (typeof cell.text === 'string') {
-          let finalText = cell.text;
+        if (cell && cell.value !== null && cell.value !== undefined) {
+          let cellText = '';
+          
+          // Handle different cell value types safely
+          if (typeof cell.value === 'string') {
+            cellText = cell.value;
+          } else if (typeof cell.value === 'number') {
+            cellText = cell.value.toString();
+          } else if (cell.value && typeof cell.value === 'object' && 'text' in cell.value && cell.value.text) {
+            cellText = cell.value.text;
+          } else if (cell.text) {
+            cellText = cell.text;
+          }
 
           const originalStyle = {
             font: cell.font ? { ...cell.font } : undefined,
@@ -72,15 +83,37 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
             protection: cell.protection ? { ...cell.protection } : undefined
           };
 
+          let finalText = cellText;
+          let hasChanges = false;
+
           Object.entries(data).forEach(([key, value]) => {
             const regex = new RegExp(`{{${key}}}`, 'g');
-            const textValue = typeof value === 'string' ? value : '[Image not supported in Excel]';
-            finalText = finalText.replace(regex, textValue);
+            if (regex.test(finalText)) {
+              // Handle different value types as objects
+              let replacementText = '';
+              
+              if (typeof value === 'string') {
+                // Check if it's a base64 image
+                if (value.startsWith('data:image/')) {
+                  replacementText = '[Image]';
+                } else {
+                  replacementText = value;
+                }
+              } else if (value && typeof value === 'object' && '_type' in value && value._type === 'image') {
+                replacementText = '[Image]';
+              } else {
+                replacementText = String(value || '');
+              }
+              
+              finalText = finalText.replace(regex, replacementText);
+              hasChanges = true;
+            }
           });
 
-          if (finalText !== cell.text) {
+          if (hasChanges) {
             cell.value = finalText;
             
+            // Restore original styling
             if (originalStyle.font) cell.font = originalStyle.font;
             if (originalStyle.alignment) cell.alignment = originalStyle.alignment;
             if (originalStyle.border) cell.border = originalStyle.border;
@@ -271,10 +304,16 @@ export const generateEnhancedPDF = async ({
 
     console.log('File uploaded to storage successfully');
 
-    // Convert placeholderData to JSON-compatible format
+    // Convert placeholderData to JSON-compatible format for database storage
     const jsonPlaceholderData: Record<string, any> = {};
     Object.entries(placeholderData).forEach(([key, value]) => {
-      jsonPlaceholderData[key] = typeof value === 'string' ? value : '[Image]';
+      if (typeof value === 'string' && value.startsWith('data:image/')) {
+        jsonPlaceholderData[key] = '[Image]';
+      } else if (typeof value === 'object' && value && '_type' in value && value._type === 'image') {
+        jsonPlaceholderData[key] = '[Image]';
+      } else {
+        jsonPlaceholderData[key] = typeof value === 'string' ? value : String(value || '');
+      }
     });
 
     // Save metadata to database
