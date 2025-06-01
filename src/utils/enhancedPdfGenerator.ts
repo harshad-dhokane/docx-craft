@@ -27,17 +27,21 @@ interface GenerationOptions {
 
 // Helper function to convert base64 image to ImageData with proper format
 const convertBase64ToImageData = async (base64String: string, altText: string = ''): Promise<ImageData> => {
+  console.log('Converting base64 to ImageData for:', altText);
+  
   // Remove data URL prefix if present
   const base64Data = base64String.replace(/^data:image\/[a-z]+;base64,/, '');
   const buffer = Buffer.from(base64Data, 'base64');
   
   // Determine format from the original string and use proper MimeType
-  let format = MimeType.Png;
+  let format: MimeType = MimeType.Png; // Default to PNG
   if (base64String.includes('data:image/jpeg') || base64String.includes('data:image/jpg')) {
     format = MimeType.Jpeg;
   } else if (base64String.includes('data:image/gif')) {
     format = MimeType.Gif;
   }
+  
+  console.log('Detected image format:', format);
   
   return {
     _type: 'image',
@@ -96,18 +100,23 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
 };
 
 const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, PlaceholderValue>): Promise<Blob> => {
+  console.log('Starting Word document processing...');
   const handler = new TemplateHandler();
   
   // Process the data with exact format required by easy-template-x
   const processedData: Record<string, any> = {};
   
   for (const [key, value] of Object.entries(data)) {
+    console.log(`Processing placeholder: ${key}`);
+    
     if (typeof value === 'string') {
       // Check if it's a base64 image
       if (value.startsWith('data:image/')) {
         try {
+          console.log(`Converting image for placeholder: ${key}`);
           const imageData = await convertBase64ToImageData(value, key);
-          // Use exact format as specified
+          
+          // Use exact format as specified by easy-template-x
           processedData[key] = {
             _type: 'image',
             source: imageData.source,
@@ -116,10 +125,12 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
             height: imageData.height,
             altText: imageData.altText || key
           };
-          console.log(`Processed image for ${key}:`, {
+          
+          console.log(`Successfully processed image for ${key}:`, {
             format: imageData.format,
             width: imageData.width,
-            height: imageData.height
+            height: imageData.height,
+            bufferSize: imageData.source.length
           });
         } catch (error) {
           console.error(`Failed to process image for ${key}:`, error);
@@ -138,21 +149,29 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
         height: value.height,
         altText: value.altText || key
       };
+      console.log(`Using existing ImageData for ${key}`);
     } else {
       processedData[key] = String(value || '');
     }
   }
 
   console.log('Processing document with data keys:', Object.keys(processedData));
+  console.log('Processed data structure:', JSON.stringify(processedData, (key, value) => {
+    if (value instanceof Buffer) return '[Buffer]';
+    return value;
+  }, 2));
 
   try {
+    console.log('Calling easy-template-x handler.process...');
     const doc = await handler.process(templateBuffer, processedData);
-    console.log('Document processed successfully');
+    console.log('Document processed successfully, size:', doc.byteLength);
     return new Blob([doc], {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     });
   } catch (error) {
     console.error('Error processing Word template:', error);
+    console.error('Error details:', error.message);
+    console.error('Stack trace:', error.stack);
     throw new Error(`Document processing failed: ${error.message}`);
   }
 };
@@ -165,10 +184,14 @@ export const generateEnhancedPDF = async ({
   userId 
 }: GenerationOptions): Promise<void> => {
   try {
-    console.log('Starting enhanced document generation with template ID:', templateId);
-    console.log('Placeholder data:', placeholderData);
+    console.log('=== Starting Enhanced Document Generation ===');
+    console.log('Template ID:', templateId);
+    console.log('Format:', format);
+    console.log('User ID:', userId);
+    console.log('Placeholder data keys:', Object.keys(placeholderData));
     
     // Get template info from database
+    console.log('Fetching template from database...');
     const { data: template, error: templateError } = await supabase
       .from('templates')
       .select('*')
@@ -179,11 +202,15 @@ export const generateEnhancedPDF = async ({
       console.error('Template fetch error:', templateError);
       throw new Error(`Template fetch error: ${templateError.message}`);
     }
-    if (!template) throw new Error('Template not found');
+    if (!template) {
+      console.error('Template not found');
+      throw new Error('Template not found');
+    }
 
     console.log('Template found:', template.name, 'File path:', template.file_path);
 
     // Download template file from Supabase storage
+    console.log('Downloading template file from storage...');
     const { data: fileData, error: fileError } = await supabase.storage
       .from('templates')
       .download(template.file_path);
@@ -192,11 +219,16 @@ export const generateEnhancedPDF = async ({
       console.error('Template download error:', fileError);
       throw new Error(`Template download error: ${fileError.message}`);
     }
-    if (!fileData) throw new Error('Template file is empty');
+    if (!fileData) {
+      console.error('Template file is empty');
+      throw new Error('Template file is empty');
+    }
 
-    console.log('Template file downloaded successfully');
+    console.log('Template file downloaded successfully, size:', fileData.size);
     
     const templateBuffer = await fileData.arrayBuffer();
+    console.log('Template buffer created, size:', templateBuffer.byteLength);
+    
     let resultBlob: Blob;
 
     // Process based on format
@@ -214,13 +246,15 @@ export const generateEnhancedPDF = async ({
         throw new Error(`Unsupported format: ${format}`);
     }
 
-    console.log('Document processed, blob size:', resultBlob.size);
+    console.log('Document processed successfully, blob size:', resultBlob.size);
 
     // Generate filename
     const baseFileName = templateName.replace(/\.[^/.]+$/, '');
     const timestamp = new Date().toISOString().split('T')[0];
     const fileName = `${baseFileName}_${timestamp}`;
     const fullFileName = `${fileName}.${format}`;
+
+    console.log('Generated filename:', fullFileName);
 
     // Upload to Supabase storage
     const storagePath = `${userId}/${Date.now()}-${fullFileName}`;
@@ -244,6 +278,7 @@ export const generateEnhancedPDF = async ({
     });
 
     // Save metadata to database
+    console.log('Saving metadata to database...');
     const { data: generatedFile, error: insertError } = await supabase
       .from('generated_pdfs')
       .insert({
@@ -266,6 +301,7 @@ export const generateEnhancedPDF = async ({
     console.log('Metadata saved to database successfully');
 
     // Update template use count
+    console.log('Updating template use count...');
     await supabase
       .from('templates')
       .update({ 
@@ -274,6 +310,7 @@ export const generateEnhancedPDF = async ({
       .eq('id', templateId);
 
     // Log activity
+    console.log('Logging activity...');
     await supabase
       .from('activity_logs')
       .insert({
@@ -289,6 +326,7 @@ export const generateEnhancedPDF = async ({
       });
 
     // Trigger download
+    console.log('Triggering download...');
     const url = window.URL.createObjectURL(resultBlob);
     const link = document.createElement('a');
     link.href = url;
@@ -298,10 +336,13 @@ export const generateEnhancedPDF = async ({
     link.remove();
     window.URL.revokeObjectURL(url);
 
+    console.log('=== Document Generation Complete ===');
     console.log('Document generated, saved to Supabase, and download triggered successfully');
 
   } catch (error) {
+    console.error('=== Document Generation Failed ===');
     console.error('Error generating document:', error);
+    console.error('Error stack:', error.stack);
     throw error;
   }
 };
