@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, FileText, Download, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import ImprovedFieldTypeSelector from "@/components/form/ImprovedFieldTypeSelector";
+import CompactFieldTypeSelector from "@/components/form/CompactFieldTypeSelector";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -122,7 +122,7 @@ const TemplateGenerator = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto p-6 max-w-4xl">
+      <div className="container mx-auto p-6 max-w-7xl">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
@@ -282,18 +282,16 @@ const TemplateGenerator = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="max-h-[600px] pr-4">
-                    <div className="space-y-6">
-                      {template.placeholders.map((placeholder: string) => (
-                        <ImprovedFieldTypeSelector
-                          key={placeholder}
-                          placeholder={placeholder}
-                          value={placeholderData[placeholder] || ""}
-                          onChange={(value) => handleInputChange(placeholder, value)}
-                        />
-                      ))}
-                    </div>
-                  </ScrollArea>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {template.placeholders.map((placeholder: string) => (
+                      <CompactFieldTypeSelector
+                        key={placeholder}
+                        placeholder={placeholder}
+                        value={placeholderData[placeholder] || ""}
+                        onChange={(value) => handleInputChange(placeholder, value)}
+                      />
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}
