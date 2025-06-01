@@ -22,34 +22,50 @@ const extractPlaceholders = async (file: File): Promise<string[]> => {
       workbook.worksheets.forEach(worksheet => {
         console.log('Processing worksheet:', worksheet.name);
         worksheet.eachRow((row) => {
+          if (!row) return;
+          
           row.eachCell({ includeEmpty: true }, (cell) => {
-            // Safe check for cell value and text
-            if (cell && cell.value !== null && cell.value !== undefined) {
-              let cellText = '';
-              
-              // Handle different cell value types
+            if (!cell || cell.value === null || cell.value === undefined) return;
+            
+            let cellText = '';
+            
+            // Safely handle different cell value types
+            try {
               if (typeof cell.value === 'string') {
                 cellText = cell.value;
               } else if (typeof cell.value === 'number') {
                 cellText = cell.value.toString();
-              } else if (cell.value && typeof cell.value === 'object' && 'text' in cell.value) {
-                cellText = cell.value.text || '';
-              } else if (cell.text) {
-                cellText = cell.text;
+              } else if (cell.value && typeof cell.value === 'object') {
+                // Handle rich text and formula objects
+                if ('text' in cell.value && typeof cell.value.text === 'string') {
+                  cellText = cell.value.text;
+                } else if ('richText' in cell.value && Array.isArray(cell.value.richText)) {
+                  cellText = cell.value.richText.map((rt: any) => rt.text || '').join('');
+                } else if ('result' in cell.value) {
+                  cellText = String(cell.value.result || '');
+                }
+              }
+              
+              // Fallback to cell.text if available
+              if (!cellText && cell.text) {
+                cellText = String(cell.text);
               }
               
               if (cellText) {
                 const matches = cellText.match(/\{\{([^}]+)\}\}/g);
                 if (matches) {
                   matches.forEach(match => {
-                    const placeholder = match.replace(/[{}]/g, '');
-                    if (placeholder.trim()) {
-                      placeholders.add(placeholder.trim());
-                      console.log('Found placeholder:', placeholder.trim());
+                    const placeholder = match.replace(/[{}]/g, '').trim();
+                    if (placeholder) {
+                      placeholders.add(placeholder);
+                      console.log('Found placeholder:', placeholder);
                     }
                   });
                 }
               }
+            } catch (cellError) {
+              console.warn('Error processing cell:', cellError);
+              // Continue processing other cells
             }
           });
         });
@@ -58,32 +74,30 @@ const extractPlaceholders = async (file: File): Promise<string[]> => {
       console.log('Processing Word file...');
       const arrayBuffer = await file.arrayBuffer();
       
-      // Use easy-template-x to extract placeholders from DOCX
-      const handler = new TemplateHandler();
-      
-      // Read the file content as text to extract placeholders
+      // Simple text extraction approach for DOCX
       const uint8Array = new Uint8Array(arrayBuffer);
-      const textContent = new TextDecoder().decode(uint8Array);
+      const textContent = new TextDecoder('utf-8', { ignoreBOM: true, fatal: false }).decode(uint8Array);
       
       // Extract placeholders using regex
       const matches = textContent.match(/\{\{([^}]+)\}\}/g);
       if (matches) {
         matches.forEach(match => {
-          const placeholder = match.replace(/[{}]/g, '');
-          if (placeholder.trim()) {
-            placeholders.add(placeholder.trim());
-            console.log('Found placeholder:', placeholder.trim());
+          const placeholder = match.replace(/[{}]/g, '').trim();
+          if (placeholder) {
+            placeholders.add(placeholder);
+            console.log('Found placeholder:', placeholder);
           }
         });
       }
     }
     
     const result = Array.from(placeholders);
-    console.log('Extracted placeholders:', result);
+    console.log('Final extracted placeholders:', result);
     return result;
     
   } catch (error) {
     console.error('Error extracting placeholders:', error);
+    console.error('Error details:', error.message, error.stack);
     // Return empty array instead of throwing to prevent upload failure
     return [];
   }
@@ -121,9 +135,16 @@ export const useTemplates = () => {
 
       console.log('Starting template upload for file:', file.name);
       
-      // Extract placeholders
-      const placeholders = await extractPlaceholders(file);
-      console.log('Extracted placeholders:', placeholders);
+      // Extract placeholders with improved error handling
+      let placeholders: string[] = [];
+      try {
+        placeholders = await extractPlaceholders(file);
+        console.log('Extracted placeholders:', placeholders);
+      } catch (extractError) {
+        console.error('Placeholder extraction failed:', extractError);
+        // Continue with empty placeholders array
+        placeholders = [];
+      }
 
       // Upload file to Supabase storage
       const fileName = `${Date.now()}-${file.name}`;
