@@ -3,6 +3,7 @@ import { Workbook } from 'exceljs';
 import { TemplateHandler, MimeType } from 'easy-template-x';
 import { Buffer } from 'buffer';
 import { supabase } from '@/integrations/supabase/client';
+import { convertToPdfOnServer } from './serverPdfGenerator';
 
 interface ImageData {
   _type: 'image';
@@ -209,6 +210,22 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
   }
 };
 
+const convertToPdfUsingLibreOffice = async (blob: Blob, originalFileName: string): Promise<Blob> => {
+  console.log('Converting to PDF using LibreOffice server...');
+  
+  // Create a File object from the blob
+  const file = new File([blob], originalFileName, { type: blob.type });
+  
+  try {
+    const pdfBlob = await convertToPdfOnServer(file);
+    console.log('LibreOffice PDF conversion completed, size:', pdfBlob.size);
+    return pdfBlob;
+  } catch (error) {
+    console.error('LibreOffice PDF conversion failed:', error);
+    throw new Error(`PDF conversion failed: ${error.message}`);
+  }
+};
+
 export const generateEnhancedPDF = async ({ 
   templateId,
   templateName, 
@@ -263,6 +280,7 @@ export const generateEnhancedPDF = async ({
     console.log('Template buffer created, size:', templateBuffer.byteLength);
     
     let resultBlob: Blob;
+    let finalFormat = format;
 
     // Process based on format
     switch (format) {
@@ -271,9 +289,24 @@ export const generateEnhancedPDF = async ({
         resultBlob = await handleExcel(templateBuffer, placeholderData);
         break;
       case 'docx':
-      case 'pdf': // For now, handle PDF as DOCX
         console.log('Processing Word document...');
         resultBlob = await handleWord(templateBuffer, placeholderData);
+        break;
+      case 'pdf':
+        console.log('Processing document for PDF conversion...');
+        if (template.name.endsWith('.xlsx')) {
+          // For Excel templates, first generate xlsx then convert to PDF
+          console.log('Processing Excel template for PDF...');
+          const excelBlob = await handleExcel(templateBuffer, placeholderData);
+          resultBlob = await convertToPdfUsingLibreOffice(excelBlob, template.name);
+          finalFormat = 'pdf';
+        } else {
+          // For Word templates, first generate docx then convert to PDF
+          console.log('Processing Word template for PDF...');
+          const wordBlob = await handleWord(templateBuffer, placeholderData);
+          resultBlob = await convertToPdfUsingLibreOffice(wordBlob, template.name);
+          finalFormat = 'pdf';
+        }
         break;
       default:
         throw new Error(`Unsupported format: ${format}`);
@@ -285,7 +318,7 @@ export const generateEnhancedPDF = async ({
     const baseFileName = templateName.replace(/\.[^/.]+$/, '');
     const timestamp = new Date().toISOString().split('T')[0];
     const fileName = `${baseFileName}_${timestamp}`;
-    const fullFileName = `${fileName}.${format}`;
+    const fullFileName = `${fileName}.${finalFormat}`;
 
     console.log('Generated filename:', fullFileName);
 
@@ -354,7 +387,7 @@ export const generateEnhancedPDF = async ({
       .from('activity_logs')
       .insert({
         user_id: userId,
-        action: `${format.toUpperCase()} Generated`,
+        action: `${finalFormat.toUpperCase()} Generated`,
         resource_type: 'generated_file',
         resource_id: generatedFile.id,
         metadata: { 

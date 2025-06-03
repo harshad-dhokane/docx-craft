@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useToast } from "./use-toast";
 import { Workbook } from 'exceljs';
+import { TemplateHandler } from 'easy-template-x';
 
 const extractPlaceholders = async (file: File): Promise<string[]> => {
   const placeholders = new Set<string>();
@@ -96,60 +96,85 @@ const extractPlaceholders = async (file: File): Promise<string[]> => {
       }
       
     } else if (file.name.endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-      console.log('Processing Word file...');
+      console.log('Processing Word file using easy-template-x...');
       
       try {
         const arrayBuffer = await file.arrayBuffer();
         console.log('Word file ArrayBuffer size:', arrayBuffer.byteLength);
         
-        // Convert ArrayBuffer to Uint8Array for text extraction
-        const uint8Array = new Uint8Array(arrayBuffer);
+        // Use easy-template-x to parse tags
+        const handler = new TemplateHandler();
+        const tags = await handler.parseTags(arrayBuffer);
         
-        // Enhanced text extraction for DOCX files
-        let textContent = '';
-        let consecutiveNulls = 0;
+        console.log('Tags found by easy-template-x:', tags);
         
-        for (let i = 0; i < uint8Array.length; i++) {
-          const byte = uint8Array[i];
-          
-          if (byte === 0) {
-            consecutiveNulls++;
-            if (consecutiveNulls < 3) {
-              textContent += ' '; // Replace single/double null bytes with spaces
-            }
-          } else {
-            consecutiveNulls = 0;
-            
-            // Include printable ASCII characters and common Unicode ranges
-            if ((byte >= 32 && byte <= 126) || byte === 10 || byte === 13 || byte === 9) {
-              textContent += String.fromCharCode(byte);
-            } else if (byte > 127) {
-              // Handle UTF-8 encoded characters
-              textContent += String.fromCharCode(byte);
-            }
-          }
-        }
-        
-        console.log('Word document text extraction complete. Length:', textContent.length);
-        
-        // Extract placeholders using regex
-        const matches = textContent.match(/\{\{([^}]+)\}\}/g);
-        if (matches && matches.length > 0) {
-          matches.forEach(match => {
-            const placeholder = match.replace(/[{}]/g, '').trim();
-            if (placeholder && placeholder.length > 0) {
-              placeholders.add(placeholder);
-              console.log(`Found Word placeholder: "${placeholder}"`);
+        // Extract placeholder names from tags
+        if (tags && Array.isArray(tags)) {
+          tags.forEach((tag: any) => {
+            if (tag && tag.name && typeof tag.name === 'string') {
+              const placeholder = tag.name.trim();
+              if (placeholder && placeholder.length > 0) {
+                placeholders.add(placeholder);
+                console.log(`Found DOCX placeholder: "${placeholder}"`);
+              }
             }
           });
         }
         
-        console.log(`Word processing complete. Found ${placeholders.size} unique placeholders.`);
+        console.log(`DOCX processing complete using easy-template-x. Found ${placeholders.size} unique placeholders.`);
         
       } catch (docxError) {
-        console.error('Error processing Word file:', docxError);
-        // Don't throw error, just log and return empty placeholders
-        console.log('Continuing with empty placeholders due to Word processing error');
+        console.error('Error processing DOCX file with easy-template-x:', docxError);
+        
+        // Fallback to basic text extraction if easy-template-x fails
+        console.log('Falling back to basic text extraction...');
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
+          
+          // Enhanced text extraction for DOCX files
+          let textContent = '';
+          let consecutiveNulls = 0;
+          
+          for (let i = 0; i < uint8Array.length; i++) {
+            const byte = uint8Array[i];
+            
+            if (byte === 0) {
+              consecutiveNulls++;
+              if (consecutiveNulls < 3) {
+                textContent += ' '; // Replace single/double null bytes with spaces
+              }
+            } else {
+              consecutiveNulls = 0;
+              
+              // Include printable ASCII characters and common Unicode ranges
+              if ((byte >= 32 && byte <= 126) || byte === 10 || byte === 13 || byte === 9) {
+                textContent += String.fromCharCode(byte);
+              } else if (byte > 127) {
+                // Handle UTF-8 encoded characters
+                textContent += String.fromCharCode(byte);
+              }
+            }
+          }
+          
+          console.log('Fallback text extraction complete. Length:', textContent.length);
+          
+          // Extract placeholders using regex
+          const matches = textContent.match(/\{\{([^}]+)\}\}/g);
+          if (matches && matches.length > 0) {
+            matches.forEach(match => {
+              const placeholder = match.replace(/[{}]/g, '').trim();
+              if (placeholder && placeholder.length > 0) {
+                placeholders.add(placeholder);
+                console.log(`Found Word placeholder (fallback): "${placeholder}"`);
+              }
+            });
+          }
+          
+          console.log(`Fallback processing complete. Found ${placeholders.size} unique placeholders.`);
+        } catch (fallbackError) {
+          console.error('Fallback text extraction also failed:', fallbackError);
+        }
       }
     } else {
       console.warn('Unsupported file type:', file.type, file.name);

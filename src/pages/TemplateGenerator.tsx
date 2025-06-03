@@ -194,30 +194,58 @@ const TemplateGenerator = () => {
                 {/* Download Buttons */}
                 <div className="flex flex-wrap gap-3">
                   {template.name.endsWith('.xlsx') ? (
-                    <Button
-                      onClick={() => handleGenerateDocument('xlsx')}
-                      disabled={isGenerating || !hasRequiredData}
-                      size="lg"
-                      className="min-w-[160px]"
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Generating...
-                        </>
-                      ) : downloadSuccess ? (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Downloaded!
-                        </>
-                      ) : (
-                        <>
-                          <Download className="h-4 w-4 mr-2" />
-                          Generate Excel
-                        </>
-                      )}
-                    </Button>
+                    // Excel template - show both Excel and PDF buttons
+                    <>
+                      <Button
+                        onClick={() => handleGenerateDocument('xlsx')}
+                        disabled={isGenerating || !hasRequiredData}
+                        size="lg"
+                        className="min-w-[160px]"
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Generating...
+                          </>
+                        ) : downloadSuccess ? (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Downloaded!
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-4 w-4 mr-2" />
+                            Generate Excel
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        onClick={() => handleGenerateDocument('pdf')}
+                        disabled={isGenerating || !hasRequiredData}
+                        size="lg"
+                        variant="secondary"
+                        className="min-w-[160px]"
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Generating...
+                          </>
+                        ) : downloadSuccess ? (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Downloaded!
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-4 w-4 mr-2" />
+                            Generate PDF
+                          </>
+                        )}
+                      </Button>
+                    </>
                   ) : (
+                    // Word template - show DOCX and PDF buttons
                     <>
                       <Button
                         onClick={() => handleGenerateDocument('docx')}
