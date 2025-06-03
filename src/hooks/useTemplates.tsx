@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -255,8 +256,7 @@ export const useTemplates = () => {
         console.error('Storage upload failed:', uploadError);
         console.error('Upload error details:', {
           message: uploadError.message,
-          statusCode: uploadError.statusCode,
-          error: uploadError.error
+          name: uploadError.name
         });
         throw new Error(`File upload failed: ${uploadError.message}`);
       }
