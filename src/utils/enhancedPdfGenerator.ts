@@ -1,9 +1,8 @@
-
 import { Workbook } from 'exceljs';
 import { TemplateHandler, MimeType } from 'easy-template-x';
 import { Buffer } from 'buffer';
 import { supabase } from '@/integrations/supabase/client';
-import { convertToPdfOnServer } from './serverPdfGenerator';
+import { convertToPdfOnServer, checkServerHealth } from './serverPdfGenerator';
 
 interface ImageData {
   _type: 'image';
@@ -213,16 +212,41 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
 const convertToPdfUsingLibreOffice = async (blob: Blob, originalFileName: string): Promise<Blob> => {
   console.log('Converting to PDF using LibreOffice server...');
   
+  // Check server health first
+  console.log('Checking server health before conversion...');
+  const isServerHealthy = await checkServerHealth();
+  
+  if (!isServerHealthy) {
+    throw new Error('PDF conversion server is not available. Please try again later or contact support.');
+  }
+  
+  console.log('Server is healthy, proceeding with conversion...');
+  
   // Create a File object from the blob
   const file = new File([blob], originalFileName, { type: blob.type });
   
   try {
     const pdfBlob = await convertToPdfOnServer(file);
     console.log('LibreOffice PDF conversion completed, size:', pdfBlob.size);
+    
+    if (pdfBlob.size === 0) {
+      throw new Error('PDF conversion resulted in an empty file');
+    }
+    
     return pdfBlob;
   } catch (error) {
     console.error('LibreOffice PDF conversion failed:', error);
-    throw new Error(`PDF conversion failed: ${error.message}`);
+    
+    // Provide more specific error messages
+    if (error.message.includes('connect')) {
+      throw new Error('Unable to connect to PDF conversion server. Please check your internet connection and try again.');
+    } else if (error.message.includes('timeout')) {
+      throw new Error('PDF conversion timed out. Please try again with a smaller file.');
+    } else if (error.message.includes('Unsupported file type')) {
+      throw new Error('The file format is not supported for PDF conversion.');
+    } else {
+      throw new Error(`PDF conversion failed: ${error.message}`);
+    }
   }
 };
 

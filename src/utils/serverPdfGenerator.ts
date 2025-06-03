@@ -5,28 +5,73 @@ export const convertToPdfOnServer = async (file: File): Promise<Blob> => {
 
   console.log('Sending file to server for PDF conversion:', file.name);
 
-  const response = await fetch('/api/convert-to-pdf', {
-    method: 'POST',
-    body: formData,
-  });
+  try {
+    const response = await fetch('/api/convert-to-pdf', {
+      method: 'POST',
+      body: formData,
+    });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    console.error('Server PDF conversion failed:', error);
-    throw new Error(error.error || 'PDF conversion failed on server');
+    console.log('Server response status:', response.status);
+    console.log('Server response headers:', Object.fromEntries(response.headers.entries()));
+
+    if (!response.ok) {
+      let errorMessage = 'PDF conversion failed on server';
+      
+      try {
+        const errorData = await response.json();
+        console.error('Server PDF conversion failed with detailed error:', errorData);
+        errorMessage = errorData.error || errorData.message || `Server error: ${response.status} ${response.statusText}`;
+      } catch (parseError) {
+        console.error('Failed to parse error response:', parseError);
+        const errorText = await response.text();
+        console.error('Raw error response:', errorText);
+        errorMessage = `Server error: ${response.status} ${response.statusText}`;
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    const pdfBlob = await response.blob();
+    console.log('PDF conversion successful, received blob size:', pdfBlob.size);
+    
+    if (pdfBlob.size === 0) {
+      throw new Error('Received empty PDF file from server');
+    }
+    
+    return pdfBlob;
+  } catch (networkError) {
+    console.error('Network error during PDF conversion:', networkError);
+    if (networkError.name === 'TypeError' && networkError.message.includes('fetch')) {
+      throw new Error('Unable to connect to PDF conversion server. Please try again later.');
+    }
+    throw networkError;
   }
-
-  const pdfBlob = await response.blob();
-  console.log('PDF conversion successful, received blob size:', pdfBlob.size);
-  
-  return pdfBlob;
 };
 
 export const checkServerHealth = async (): Promise<boolean> => {
   try {
-    const response = await fetch('/api/health');
+    console.log('Checking server health...');
+    const response = await fetch('/api/health', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+    
+    console.log('Health check response status:', response.status);
+    
+    if (!response.ok) {
+      console.error('Health check failed with status:', response.status);
+      return false;
+    }
+    
     const data = await response.json();
-    return response.ok && data.status === 'ok';
+    console.log('Health check response:', data);
+    
+    const isHealthy = data.status === 'ok';
+    console.log('Server health status:', isHealthy ? 'healthy' : 'unhealthy');
+    
+    return isHealthy;
   } catch (error) {
     console.error('Server health check failed:', error);
     return false;
