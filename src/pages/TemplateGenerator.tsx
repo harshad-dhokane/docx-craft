@@ -66,8 +66,9 @@ const TemplateGenerator = () => {
   const handleGenerateDocument = async (format: 'pdf' | 'docx' | 'xlsx' = 'pdf') => {
     if (!template || !templateId || !user) return;
 
-    // Clear previous errors
+    // Clear previous errors and success states for other formats
     setGenerationError(null);
+    setDownloadSuccess({}); // Clear all previous success states
     setGeneratingFormat(format);
 
     // Use a default document name if none is provided
@@ -96,7 +97,7 @@ const TemplateGenerator = () => {
         userId: user.id
       });
 
-      setDownloadSuccess(prev => ({ ...prev, [format]: true }));
+      setDownloadSuccess({ [format]: true }); // Only set success for this specific format
       toast({
         title: "Success",
         description: `Your ${format.toUpperCase()} document has been generated and downloaded successfully.`,
@@ -104,7 +105,7 @@ const TemplateGenerator = () => {
 
       // Reset success state after 3 seconds
       setTimeout(() => {
-        setDownloadSuccess(prev => ({ ...prev, [format]: false }));
+        setDownloadSuccess({});
       }, 3000);
 
     } catch (error) {
