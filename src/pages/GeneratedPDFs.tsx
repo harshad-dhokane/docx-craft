@@ -1,3 +1,4 @@
+
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,6 @@ import { useGeneratedPDFs } from "@/hooks/useGeneratedPDFs";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useMemo } from "react";
 import { GeneratedPDF } from '@/hooks/useGeneratedPDFs';
-import { TemplateDistribution } from "@/components/TemplateDistribution";
 
 // Helper functions
 const formatFileSize = (bytes: number | null) => {
@@ -47,15 +47,29 @@ const CreatedFiles = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
-  const [templateFilter, setTemplateFilter] = useState<string | null>(null);
+  const [templateFilter, setTemplateFilter] = useState<string>("all");
   const filesPerPage = 6; // Show 6 files per page
+
+  // Get unique templates for dropdown
+  const templates = useMemo(() => {
+    const uniqueTemplates = generatedPDFs.reduce((acc, pdf) => {
+      if (!acc.find(t => t.id === pdf.template_id)) {
+        acc.push({
+          id: pdf.template_id,
+          name: pdf.template_name || 'Unknown Template'
+        });
+      }
+      return acc;
+    }, [] as { id: string; name: string }[]);
+    return uniqueTemplates;
+  }, [generatedPDFs]);
 
   // Filter and search files
   const filteredFiles = useMemo(() => {
     let filtered = generatedPDFs;
     
     // Apply template filter first
-    if (templateFilter) {
+    if (templateFilter !== "all") {
       filtered = filtered.filter(pdf => pdf.template_id === templateFilter);
     }
     
@@ -104,6 +118,11 @@ const CreatedFiles = () => {
     setCurrentPage(1);
   };
 
+  const handleTemplateFilterChange = (templateId: string) => {
+    setTemplateFilter(templateId);
+    setCurrentPage(1);
+  };
+
   const totalSize = filteredFiles.reduce((acc, pdf) => acc + (pdf.file_size || 0), 0);
   const recentFiles = filteredFiles.filter(pdf => {
     const genDate = new Date(pdf.generated_date);
@@ -111,11 +130,15 @@ const CreatedFiles = () => {
     return genDate > weekAgo;
   }).length;
 
+  // Get selected template info for display
+  const selectedTemplate = templates.find(t => t.id === templateFilter);
+  const selectedTemplateName = selectedTemplate?.name || 'All Templates';
+
   const stats = [
     {
       title: "Total Files",
       value: filteredFiles.length.toString(),
-      description: templateFilter ? "Files from selected template" : "Generated documents",
+      description: templateFilter !== "all" ? `Files from ${selectedTemplateName}` : "Generated documents",
       icon: FileText,
       color: "bg-blue-500",
     },
@@ -155,16 +178,7 @@ const CreatedFiles = () => {
         <p className="text-gray-600 text-sm lg:text-base">View and manage all your generated documents and files.</p>
       </div>
 
-      {/* Template Distribution Section */}
-      {generatedPDFs.length > 0 && (
-        <TemplateDistribution 
-          generatedPDFs={generatedPDFs}
-          onTemplateFilter={setTemplateFilter}
-          activeTemplateFilter={templateFilter}
-        />
-      )}
-
-      {/* Stats Cards */}
+      {/* Analytics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
         {stats.map((stat, index) => (
           <Card key={index} className="hover:shadow-lg transition-all duration-200 border-0 shadow-md">
@@ -198,11 +212,28 @@ const CreatedFiles = () => {
                   className="pl-10 w-64"
                 />
               </div>
+              
               <div className="flex items-center space-x-2">
-                <Filter className="h-4 w-4 text-gray-600" />
-                <span className="text-sm font-medium text-gray-700">Filter by type:</span>
+                <span className="text-sm font-medium text-gray-700">Template:</span>
+                <Select value={templateFilter} onValueChange={handleTemplateFilterChange}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Select template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Templates</SelectItem>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium text-gray-700">Type:</span>
                 <Select value={fileTypeFilter} onValueChange={handleFilterChange}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="Select file type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -236,7 +267,7 @@ const CreatedFiles = () => {
           <div className="flex items-center justify-between text-sm text-gray-600">
             <span>
               Showing {startIndex + 1}-{Math.min(startIndex + filesPerPage, filteredFiles.length)} of {filteredFiles.length} files
-              {templateFilter && " (filtered by template)"}
+              {templateFilter !== "all" && ` from ${selectedTemplateName}`}
             </span>
             {totalPages > 1 && (
               <span>Page {currentPage} of {totalPages}</span>
@@ -253,10 +284,12 @@ const CreatedFiles = () => {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               {searchQuery ? "No matching files found" :
+               templateFilter !== "all" ? `No files found for ${selectedTemplateName}` :
                fileTypeFilter === "all" ? "No Files Generated Yet" : `No ${fileTypeFilter.toUpperCase()} Files Found`}
             </h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
               {searchQuery ? `No files match "${searchQuery}". Try a different search term.` :
+               templateFilter !== "all" ? `You haven't generated any files using ${selectedTemplateName} yet.` :
                fileTypeFilter === "all" 
                 ? "You haven't generated any documents yet. Start by creating a document from one of your templates."
                 : `You haven't generated any ${fileTypeFilter.toUpperCase()} files yet.`
@@ -269,6 +302,15 @@ const CreatedFiles = () => {
                 className="mr-4"
               >
                 Clear Search
+              </Button>
+            )}
+            {templateFilter !== "all" && (
+              <Button 
+                variant="outline" 
+                onClick={() => setTemplateFilter("all")}
+                className="mr-4"
+              >
+                Show All Templates
               </Button>
             )}
             {fileTypeFilter !== "all" && (
