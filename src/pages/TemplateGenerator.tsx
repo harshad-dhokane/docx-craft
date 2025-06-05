@@ -24,7 +24,7 @@ const TemplateGenerator = () => {
   const [pdfName, setPdfName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingFormat, setGeneratingFormat] = useState<'pdf' | 'docx' | 'xlsx' | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
   const template = templates.find(t => t.id === templateId);
@@ -68,7 +68,7 @@ const TemplateGenerator = () => {
 
     // Clear previous errors
     setGenerationError(null);
-    setIsGenerating(true);
+    setGeneratingFormat(format);
 
     // Use a default document name if none is provided
     const documentName = pdfName.trim() || `${template.name.replace(/\.[^/.]+$/, '')}_${new Date().toISOString().split('T')[0]}`;
@@ -117,7 +117,7 @@ const TemplateGenerator = () => {
         variant: "destructive",
       });
     } finally {
-      setIsGenerating(false);
+      setGeneratingFormat(null);
     }
   };
 
@@ -126,6 +126,8 @@ const TemplateGenerator = () => {
   const hasRequiredData = templatePlaceholders.some((placeholder: any) => 
     typeof placeholder === 'string' && placeholderData[placeholder]?.trim()
   );
+
+  const isGenerating = generatingFormat !== null;
 
   return (
     <DashboardLayout>
@@ -202,7 +204,7 @@ const TemplateGenerator = () => {
                         size="lg"
                         className="min-w-[160px]"
                       >
-                        {isGenerating ? (
+                        {generatingFormat === 'xlsx' ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             Generating...
@@ -226,7 +228,7 @@ const TemplateGenerator = () => {
                         variant="secondary"
                         className="min-w-[160px]"
                       >
-                        {isGenerating ? (
+                        {generatingFormat === 'pdf' ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             Generating...
@@ -254,7 +256,7 @@ const TemplateGenerator = () => {
                         variant="default"
                         className="min-w-[160px]"
                       >
-                        {isGenerating ? (
+                        {generatingFormat === 'docx' ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             Generating...
@@ -278,7 +280,7 @@ const TemplateGenerator = () => {
                         variant="secondary"
                         className="min-w-[160px]"
                       >
-                        {isGenerating ? (
+                        {generatingFormat === 'pdf' ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             Generating...
