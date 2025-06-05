@@ -23,7 +23,7 @@ const TemplateGenerator = () => {
   const [placeholderData, setPlaceholderData] = useState<Record<string, string>>({});
   const [pdfName, setPdfName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState<Record<string, boolean>>({});
   const [generatingFormat, setGeneratingFormat] = useState<'pdf' | 'docx' | 'xlsx' | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
@@ -96,7 +96,7 @@ const TemplateGenerator = () => {
         userId: user.id
       });
 
-      setDownloadSuccess(true);
+      setDownloadSuccess(prev => ({ ...prev, [format]: true }));
       toast({
         title: "Success",
         description: `Your ${format.toUpperCase()} document has been generated and downloaded successfully.`,
@@ -104,7 +104,7 @@ const TemplateGenerator = () => {
 
       // Reset success state after 3 seconds
       setTimeout(() => {
-        setDownloadSuccess(false);
+        setDownloadSuccess(prev => ({ ...prev, [format]: false }));
       }, 3000);
 
     } catch (error) {
@@ -209,7 +209,7 @@ const TemplateGenerator = () => {
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             Generating...
                           </>
-                        ) : downloadSuccess ? (
+                        ) : downloadSuccess.xlsx ? (
                           <>
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Downloaded!
@@ -233,7 +233,7 @@ const TemplateGenerator = () => {
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             Generating...
                           </>
-                        ) : downloadSuccess ? (
+                        ) : downloadSuccess.pdf ? (
                           <>
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Downloaded!
@@ -261,7 +261,7 @@ const TemplateGenerator = () => {
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             Generating...
                           </>
-                        ) : downloadSuccess ? (
+                        ) : downloadSuccess.docx ? (
                           <>
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Downloaded!
@@ -285,7 +285,7 @@ const TemplateGenerator = () => {
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             Generating...
                           </>
-                        ) : downloadSuccess ? (
+                        ) : downloadSuccess.pdf ? (
                           <>
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Downloaded!
