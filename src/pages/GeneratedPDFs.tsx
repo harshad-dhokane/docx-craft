@@ -18,6 +18,7 @@ import { useGeneratedPDFs } from "@/hooks/useGeneratedPDFs";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useMemo } from "react";
 import { GeneratedPDF } from '@/hooks/useGeneratedPDFs';
+import { TemplateDistribution } from "@/components/TemplateDistribution";
 
 // Helper functions
 const formatFileSize = (bytes: number | null) => {
@@ -46,11 +47,17 @@ const CreatedFiles = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
+  const [templateFilter, setTemplateFilter] = useState<string | null>(null);
   const filesPerPage = 6; // Show 6 files per page
 
   // Filter and search files
   const filteredFiles = useMemo(() => {
     let filtered = generatedPDFs;
+    
+    // Apply template filter first
+    if (templateFilter) {
+      filtered = filtered.filter(pdf => pdf.template_id === templateFilter);
+    }
     
     // Apply type filter
     if (fileTypeFilter !== "all") {
@@ -79,7 +86,7 @@ const CreatedFiles = () => {
     }
     
     return filtered;
-  }, [generatedPDFs, fileTypeFilter, searchQuery]);
+  }, [generatedPDFs, fileTypeFilter, searchQuery, templateFilter]);
 
   // Paginate filtered files
   const totalPages = Math.ceil(filteredFiles.length / filesPerPage);
@@ -108,7 +115,7 @@ const CreatedFiles = () => {
     {
       title: "Total Files",
       value: filteredFiles.length.toString(),
-      description: "Generated documents",
+      description: templateFilter ? "Files from selected template" : "Generated documents",
       icon: FileText,
       color: "bg-blue-500",
     },
@@ -147,6 +154,15 @@ const CreatedFiles = () => {
         <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">Created Files</h1>
         <p className="text-gray-600 text-sm lg:text-base">View and manage all your generated documents and files.</p>
       </div>
+
+      {/* Template Distribution Section */}
+      {generatedPDFs.length > 0 && (
+        <TemplateDistribution 
+          generatedPDFs={generatedPDFs}
+          onTemplateFilter={setTemplateFilter}
+          activeTemplateFilter={templateFilter}
+        />
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
@@ -220,6 +236,7 @@ const CreatedFiles = () => {
           <div className="flex items-center justify-between text-sm text-gray-600">
             <span>
               Showing {startIndex + 1}-{Math.min(startIndex + filesPerPage, filteredFiles.length)} of {filteredFiles.length} files
+              {templateFilter && " (filtered by template)"}
             </span>
             {totalPages > 1 && (
               <span>Page {currentPage} of {totalPages}</span>
