@@ -3,11 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Upload, Download, Zap, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 
 const Index = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   const handleGetStarted = () => {
     if (user) {
@@ -19,7 +19,7 @@ const Index = () => {
   };
 
   const handleSignIn = () => {
-    navigate("/dashboard"); // This will redirect to auth page if not logged in
+    setLocation("/dashboard"); // This will redirect to auth page if not logged in
   };
 
   return (

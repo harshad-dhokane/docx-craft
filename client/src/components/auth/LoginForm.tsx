@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -23,7 +23,7 @@ const LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { signIn } = useAuth();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   const {
     register,
@@ -49,7 +49,7 @@ const LoginForm = () => {
           title: "Login Successful",
           description: "Welcome back! Redirecting to dashboard...",
         });
-        navigate("/dashboard");
+        setLocation("/dashboard");
       }
     } catch (error) {
       toast({

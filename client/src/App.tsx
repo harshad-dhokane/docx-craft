@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Router, Route, Switch } from "wouter";
 import { AuthProvider } from "./hooks/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
@@ -24,79 +24,56 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/templates" 
-              element={
-                <ProtectedRoute>
-                  <Templates />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/generated-pdfs" 
-              element={
-                <ProtectedRoute>
-                  <GeneratedPDFs />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/user-guide" 
-              element={
-                <ProtectedRoute>
-                  <UserGuide />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/analytics" 
-              element={
-                <ProtectedRoute>
-                  <Analytics />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/activity" 
-              element={
-                <ProtectedRoute>
-                  <Activity />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/templates/:templateId/generate" 
-              element={
-                <ProtectedRoute>
-                  <TemplateGenerator />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/settings" 
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } 
-            />
-            {/* Redirect old routes */}
-            <Route path="/upload" element={<Navigate to="/templates" replace />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <Router>
+          <Switch>
+            <Route path="/">
+              <Index />
+            </Route>
+            <Route path="/dashboard">
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/templates">
+              <ProtectedRoute>
+                <Templates />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/generated-pdfs">
+              <ProtectedRoute>
+                <GeneratedPDFs />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/user-guide">
+              <ProtectedRoute>
+                <UserGuide />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/analytics">
+              <ProtectedRoute>
+                <Analytics />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/activity">
+              <ProtectedRoute>
+                <Activity />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/templates/:templateId/generate">
+              <ProtectedRoute>
+                <TemplateGenerator />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/settings">
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            </Route>
+            <Route>
+              <NotFound />
+            </Route>
+          </Switch>
+        </Router>
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
