@@ -49,16 +49,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, name: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          name,
+          full_name: name,
+          name: name,
         },
+        emailRedirectTo: `${window.location.origin}/auth/callback`
       },
     });
-    return { error };
+    
+    if (error) {
+      console.error('Signup error:', error);
+      return { error };
+    }
+
+    // Log successful signup for debugging
+    console.log('Signup successful, user:', data.user?.id, 'email_confirmed:', !!data.user?.email_confirmed_at);
+    
+    return { error: null };
   };
 
   const signOut = async () => {

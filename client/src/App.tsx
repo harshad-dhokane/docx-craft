@@ -15,6 +15,7 @@ import Analytics from "./pages/Analytics";
 import Activity from "./pages/Activity";
 import GeneratedPDFs from "./pages/GeneratedPDFs";
 import UserGuide from "./pages/UserGuide";
+import AuthCallback from "./pages/AuthCallback";
 
 const queryClient = new QueryClient();
 
