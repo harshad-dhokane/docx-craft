@@ -6,7 +6,7 @@ import { FileText, Download, Upload, Plus, Calendar, Trash2, TrendingUp } from "
 import { Badge } from "@/components/ui/badge";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useGeneratedPDFs } from "@/hooks/useGeneratedPDFs";
-import { Link } from "react-router-dom";
+import { Link } from "wouter";
 import UploadTemplateDialog from "@/components/UploadTemplateDialog";
 
 const Dashboard = () => {

@@ -19,7 +19,7 @@ import { Upload, FileText, Trash2, Eye, Plus, Activity, Users, Clock, FileSpread
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 import UploadTemplateDialog from "@/components/UploadTemplateDialog";
 
 const Templates = () => {
@@ -31,10 +31,10 @@ const Templates = () => {
   
   const { templates, isLoading, deleteTemplate } = useTemplates();
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   const handleGeneratePDF = (templateId: string) => {
-    navigate(`/templates/${templateId}/generate`);
+    setLocation(`/templates/${templateId}/generate`);
   };
 
   const handleDeleteTemplate = async (templateId: string) => {

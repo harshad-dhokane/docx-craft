@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfiles } from "@/hooks/useProfiles";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "wouter";
 
 const navigation = [
   { name: "Dashboard", icon: Home, href: "/dashboard" },
@@ -41,7 +41,7 @@ const secondaryNavigation = [
 export function AppSidebar() {
   const { user, signOut } = useAuth();
   const { profile } = useProfiles();
-  const location = useLocation();
+  const [location] = useLocation();
 
   const handleLogout = async () => {
     try {
@@ -52,7 +52,7 @@ export function AppSidebar() {
     }
   };
 
-  const isActive = (href: string) => location.pathname === href;
+  const isActive = (href: string) => location === href;
 
   const getUserInitials = () => {
     const name = profile?.display_name || user?.user_metadata?.name || user?.email || "";
