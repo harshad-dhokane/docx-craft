@@ -2,10 +2,10 @@
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, Upload, Edit, Clock, TrendingUp, Calendar, Users, Activity as ActivityIcon } from "lucide-react";
+import { FileText, Download, Upload, Edit, Clock, TrendingUp, Calendar, Users, Activity as ActivityIcon, BarChart3 } from "lucide-react";
 import { useActivity } from "@/hooks/useActivity";
 import { useGeneratedPDFs } from "@/hooks/useGeneratedPDFs";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, startOfWeek, startOfMonth } from "date-fns";
 import { useMemo } from "react";
 
 const Activity = () => {
@@ -16,21 +16,23 @@ const Activity = () => {
 
   const quickStats = useMemo(() => {
     const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
     const todayActivities = activities.filter(activity => {
       const activityDate = new Date(activity.created_at);
-      return activityDate.toDateString() === today.toDateString();
+      return activityDate >= todayStart;
     }).length;
 
-    const thisWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday as start of week
     const weekActivities = activities.filter(activity => {
       const activityDate = new Date(activity.created_at);
-      return activityDate >= thisWeek;
+      return activityDate >= weekStart;
     }).length;
 
-    const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthStart = startOfMonth(today);
     const monthActivities = activities.filter(activity => {
       const activityDate = new Date(activity.created_at);
-      return activityDate >= thisMonth;
+      return activityDate >= monthStart;
     }).length;
 
     const totalDocuments = generatedPDFs.length;
@@ -104,7 +106,7 @@ const Activity = () => {
         percentage: Math.round((count / total) * 100)
       }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 5); // Show top 5 activity types
+      .slice(0, 5);
   }, [activities]);
 
   if (isLoading) {
@@ -128,6 +130,7 @@ const Activity = () => {
           <p className="text-base sm:text-lg text-gray-600">Track your recent document generation and template activities.</p>
         </div>
 
+        {/* Quick Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {quickStats.map((stat, index) => (
             <Card key={index} className="border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 bg-white/95 backdrop-blur-sm">
@@ -146,9 +149,11 @@ const Activity = () => {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
-          <div className="xl:col-span-2">
-            <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
+        {/* Main Content Grid - Responsive Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8">
+          {/* Recent Activity Feed - Takes more space */}
+          <div className="lg:col-span-3">
+            <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm h-full">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center text-lg sm:text-xl">
                   <Clock className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-blue-600" />
@@ -207,58 +212,21 @@ const Activity = () => {
             </Card>
           </div>
 
-          <div className="space-y-6">
-            <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg sm:text-xl">Activity Overview</CardTitle>
-                <CardDescription className="text-sm sm:text-base">
-                  Performance metrics at a glance
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 sm:space-y-6">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 sm:p-6 rounded-xl border border-blue-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm sm:text-base font-semibold text-blue-800">Total Activities</span>
-                    <span className="text-lg sm:text-xl font-bold text-blue-900">{activities.length}</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-blue-700">All recorded actions</p>
-                </div>
-
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 sm:p-6 rounded-xl border border-green-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm sm:text-base font-semibold text-green-800">This Week</span>
-                    <span className="text-lg sm:text-xl font-bold text-green-900">{quickStats[1].value}</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-green-700">Actions this week</p>
-                </div>
-
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 sm:p-6 rounded-xl border border-purple-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm sm:text-base font-semibold text-purple-800">Today's Activity</span>
-                    <span className="text-lg sm:text-xl font-bold text-purple-900">{quickStats[0].value}</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-purple-700">Actions performed today</p>
-                </div>
-
-                <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-4 sm:p-6 rounded-xl border border-orange-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm sm:text-base font-semibold text-orange-800">Documents</span>
-                    <span className="text-lg sm:text-xl font-bold text-orange-900">{generatedPDFs.length}</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-orange-700">Generated documents</p>
-                </div>
-              </CardContent>
-            </Card>
-
+          {/* Sidebar - Analytics and Distribution */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Activity Distribution */}
             {activityDistribution.length > 0 && (
               <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-lg sm:text-xl">Activity Distribution</CardTitle>
+                  <CardTitle className="flex items-center text-lg sm:text-xl">
+                    <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-purple-600" />
+                    Activity Distribution
+                  </CardTitle>
                   <CardDescription className="text-sm sm:text-base">
                     Breakdown by action type
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3 sm:space-y-4 overflow-hidden">
+                <CardContent className="space-y-4">
                   {activityDistribution.map((item, index) => {
                     const colors = [
                       'from-blue-500 to-blue-600', 
@@ -270,19 +238,22 @@ const Activity = () => {
                     const color = colors[index % colors.length];
                     
                     return (
-                      <div key={item.action} className="flex items-center justify-between gap-2">
-                        <div className="flex items-center min-w-0 flex-1">
-                          <div className={`w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-r ${color} rounded-full mr-2 sm:mr-3 shadow-sm flex-shrink-0`}></div>
-                          <span className="text-sm sm:text-base text-gray-700 font-medium capitalize truncate">{item.action}</span>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <div className="w-16 sm:w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-2 bg-gradient-to-r ${color} rounded-full transition-all duration-500`} 
-                              style={{ width: `${Math.min(item.percentage, 100)}%` }}
-                            ></div>
+                      <div key={item.action} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div className={`w-3 h-3 bg-gradient-to-r ${color} rounded-full mr-3 shadow-sm`}></div>
+                            <span className="text-sm font-medium capitalize text-gray-700">{item.action}</span>
                           </div>
-                          <span className="text-sm sm:text-base font-semibold text-gray-900 w-8 text-right">{item.percentage}%</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600">{item.count}</span>
+                            <span className="text-sm font-semibold text-gray-900">{item.percentage}%</span>
+                          </div>
+                        </div>
+                        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-2 bg-gradient-to-r ${color} rounded-full transition-all duration-500`} 
+                            style={{ width: `${Math.min(item.percentage, 100)}%` }}
+                          ></div>
                         </div>
                       </div>
                     );
@@ -290,6 +261,49 @@ const Activity = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* Quick Metrics */}
+            <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg sm:text-xl">Quick Metrics</CardTitle>
+                <CardDescription className="text-sm sm:text-base">
+                  Performance at a glance
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-blue-800">Total Activities</span>
+                    <span className="text-lg font-bold text-blue-900">{activities.length}</span>
+                  </div>
+                  <p className="text-xs text-blue-700">All recorded actions</p>
+                </div>
+
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-green-800">This Week</span>
+                    <span className="text-lg font-bold text-green-900">{quickStats[1].value}</span>
+                  </div>
+                  <p className="text-xs text-green-700">Actions this week</p>
+                </div>
+
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-purple-800">This Month</span>
+                    <span className="text-lg font-bold text-purple-900">{quickStats[2].value}</span>
+                  </div>
+                  <p className="text-xs text-purple-700">Actions this month</p>
+                </div>
+
+                <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-xl border border-orange-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-orange-800">Documents</span>
+                    <span className="text-lg font-bold text-orange-900">{generatedPDFs.length}</span>
+                  </div>
+                  <p className="text-xs text-orange-700">Generated documents</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
