@@ -1,48 +1,20 @@
+
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Download, Upload, Edit, Clock, TrendingUp, Calendar, Activity as ActivityIcon, BarChart3 } from "lucide-react";
 import { useActivity } from "@/hooks/useActivity";
 import { useGeneratedPDFs } from "@/hooks/useGeneratedPDFs";
-import { formatDistanceToNow, startOfWeek, startOfMonth } from "date-fns";
+import { useTemplates } from "@/hooks/useTemplates";
+import { formatDistanceToNow } from "date-fns";
 import { useMemo } from "react";
 
 const Activity = () => {
   const { activities, isLoading: activitiesLoading } = useActivity();
   const { generatedPDFs, isLoading: pdfsLoading } = useGeneratedPDFs();
+  const { templates, isLoading: templatesLoading } = useTemplates();
 
-  const isLoading = activitiesLoading || pdfsLoading;
-
-  const quickStats = useMemo(() => {
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    
-    const todayActivities = activities.filter(activity => {
-      const activityDate = new Date(activity.created_at);
-      return activityDate >= todayStart;
-    }).length;
-
-    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-    const weekActivities = activities.filter(activity => {
-      const activityDate = new Date(activity.created_at);
-      return activityDate >= weekStart;
-    }).length;
-
-    const monthStart = startOfMonth(today);
-    const monthActivities = activities.filter(activity => {
-      const activityDate = new Date(activity.created_at);
-      return activityDate >= monthStart;
-    }).length;
-
-    const totalDocuments = generatedPDFs.length;
-
-    return [
-      { label: "Today's Activity", value: todayActivities.toString(), icon: Clock, color: "from-blue-500 to-blue-600" },
-      { label: "This Week", value: weekActivities.toString(), icon: Calendar, color: "from-green-500 to-green-600" },
-      { label: "This Month", value: monthActivities.toString(), icon: TrendingUp, color: "from-purple-500 to-purple-600" },
-      { label: "Total Documents", value: totalDocuments.toString(), icon: FileText, color: "from-orange-500 to-orange-600" },
-    ];
-  }, [activities, generatedPDFs]);
+  const isLoading = activitiesLoading || pdfsLoading || templatesLoading;
 
   const getActivityBadge = (action: string) => {
     const badges = {
@@ -108,6 +80,16 @@ const Activity = () => {
       .slice(0, 5);
   }, [activities]);
 
+  // Dynamic summary stats based on actual user data
+  const summaryStats = useMemo(() => {
+    return {
+      totalActions: activities.length,
+      totalTemplates: templates.length,
+      totalDocuments: generatedPDFs.length,
+      mostCommonAction: activityDistribution.length > 0 ? activityDistribution[0] : null
+    };
+  }, [activities.length, templates.length, generatedPDFs.length, activityDistribution]);
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -123,35 +105,16 @@ const Activity = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 sm:space-y-8 p-4 sm:p-6">
+      <div className="space-y-6 p-4 sm:p-6">
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">Activity Center</h1>
           <p className="text-base sm:text-lg text-gray-600">Track your recent document generation and template activities.</p>
         </div>
 
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          {quickStats.map((stat, index) => (
-            <Card key={index} className="border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 bg-white/95 backdrop-blur-sm">
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center justify-between">
-                  <div className={`p-3 sm:p-4 bg-gradient-to-br ${stat.color} rounded-xl shadow-lg`}>
-                    <stat.icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{stat.value}</p>
-                    <p className="text-xs sm:text-sm text-gray-600 font-medium">{stat.label}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Main Content Grid - Redesigned Layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
-          {/* Recent Activity Feed - Takes more space */}
-          <div className="xl:col-span-2">
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Recent Activity Feed - Takes 3 columns */}
+          <div className="lg:col-span-3">
             <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm h-full">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center text-lg sm:text-xl">
@@ -211,16 +174,17 @@ const Activity = () => {
             </Card>
           </div>
 
-          {/* Activity Distribution - Full width on mobile, sidebar on desktop */}
-          <div className="xl:col-span-1">
+          {/* Sidebar - Takes 1 column */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Activity Distribution */}
             {activityDistribution.length > 0 && (
-              <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm h-fit">
+              <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center text-lg sm:text-xl">
-                    <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-purple-600" />
+                  <CardTitle className="flex items-center text-lg">
+                    <BarChart3 className="h-5 w-5 mr-2 text-purple-600" />
                     Activity Distribution
                   </CardTitle>
-                  <CardDescription className="text-sm sm:text-base">
+                  <CardDescription className="text-sm">
                     Breakdown by action type
                   </CardDescription>
                 </CardHeader>
@@ -261,31 +225,36 @@ const Activity = () => {
             )}
             
             {/* Summary Stats Card */}
-            <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm mt-6">
+            <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg sm:text-xl">Activity Summary</CardTitle>
-                <CardDescription className="text-sm sm:text-base">
+                <CardTitle className="text-lg">Activity Summary</CardTitle>
+                <CardDescription className="text-sm">
                   Overview of your usage
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                    <p className="text-2xl font-bold text-blue-900">{activities.length}</p>
+                    <p className="text-2xl font-bold text-blue-900">{summaryStats.totalActions}</p>
                     <p className="text-xs text-blue-700 font-medium">Total Actions</p>
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                    <p className="text-2xl font-bold text-green-900">{generatedPDFs.length}</p>
-                    <p className="text-xs text-green-700 font-medium">Documents</p>
+                    <p className="text-2xl font-bold text-green-900">{summaryStats.totalTemplates}</p>
+                    <p className="text-xs text-green-700 font-medium">Templates</p>
                   </div>
                 </div>
                 
-                {activityDistribution.length > 0 && (
+                <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                  <p className="text-2xl font-bold text-purple-900">{summaryStats.totalDocuments}</p>
+                  <p className="text-xs text-purple-700 font-medium">Documents Generated</p>
+                </div>
+                
+                {summaryStats.mostCommonAction && (
                   <div className="pt-2">
                     <p className="text-sm font-medium text-gray-700 mb-2">Most Common Action:</p>
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-                      <span className="text-sm font-semibold text-purple-800 capitalize">{activityDistribution[0].action}</span>
-                      <span className="text-sm font-bold text-purple-900">{activityDistribution[0].count} times</span>
+                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg border border-orange-200">
+                      <span className="text-sm font-semibold text-orange-800 capitalize">{summaryStats.mostCommonAction.action}</span>
+                      <span className="text-sm font-bold text-orange-900">{summaryStats.mostCommonAction.count} times</span>
                     </div>
                   </div>
                 )}
