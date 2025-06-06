@@ -370,6 +370,18 @@ export const useTemplates = () => {
         throw fetchError;
       }
 
+      // First, delete all generated PDFs that reference this template
+      const { error: deletePdfsError } = await supabase
+        .from('generated_pdfs')
+        .delete()
+        .eq('template_id', templateId)
+        .eq('user_id', user.id);
+
+      if (deletePdfsError) {
+        console.error('Error deleting related generated PDFs:', deletePdfsError);
+        throw new Error(`Failed to delete related PDFs: ${deletePdfsError.message}`);
+      }
+
       // Delete the file from storage
       const { error: storageError } = await supabase.storage
         .from('templates')
