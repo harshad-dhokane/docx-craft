@@ -6,7 +6,7 @@ import { convertToPdfOnServer, checkServerHealth } from './serverPdfGenerator';
 
 interface ImageData {
   _type: 'image';
-  source: Buffer;
+  source: Uint8Array;
   format: MimeType;
   width: number;
   height: number;
@@ -84,9 +84,12 @@ const convertBase64ToImageData = async (base64String: string, altText: string = 
     console.log(`Detected image format: ${format} (${imageType}), buffer size: ${buffer.length} bytes`);
     
     // Use more reasonable dimensions for document layout
+    // Convert Buffer to Uint8Array for easy-template-x compatibility
+    const uint8Array = new Uint8Array(buffer);
+    
     return {
       _type: 'image',
-      source: buffer,
+      source: uint8Array,
       format: format,
       width: 300,  // Increased for better visibility
       height: 200, // Maintain aspect ratio consideration
@@ -213,7 +216,7 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
             format: imageData.format,
             width: imageData.width,
             height: imageData.height,
-            bufferSize: imageData.source.length,
+            bufferSize: imageData.source.byteLength,
             altText: imageData.altText
           });
         } catch (error) {
@@ -249,6 +252,7 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
 
   console.log('Processing document with data keys:', Object.keys(processedData));
   const logData = JSON.stringify(processedData, (key, value) => {
+    if (value instanceof Uint8Array) return `[Uint8Array: ${value.byteLength} bytes]`;
     if (value instanceof Buffer) return `[Buffer: ${value.length} bytes]`;
     if (typeof value === 'object' && value && '_type' in value && value._type === 'image') {
       return `[ImageData: ${value.format}, ${value.width}x${value.height}]`;
@@ -443,7 +447,7 @@ export const generateEnhancedPDF = async ({
         jsonPlaceholderData[key] = `[${imageType} Image - ~${sizeKB}KB]`;
       } else if (typeof value === 'object' && value && '_type' in value && value._type === 'image') {
         const format = value.format ? value.format.split('/').pop()?.toUpperCase() : 'IMAGE';
-        const sizeKB = value.source ? Math.round(value.source.length / 1024) : 0;
+        const sizeKB = value.source ? Math.round(value.source.byteLength / 1024) : 0;
         jsonPlaceholderData[key] = `[${format} Image - ${sizeKB}KB]`;
       } else {
         jsonPlaceholderData[key] = typeof value === 'string' ? value : String(value || '');
