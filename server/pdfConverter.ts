@@ -1,12 +1,15 @@
 import { spawn } from 'child_process';
-import fs from 'fs/promises';
-import path from 'path';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as os from 'os';
 import { randomUUID } from 'crypto';
 
 export class LibreOfficePDFConverter {
-  private tempDir = '/tmp/pdf-conversion';
+  private tempDir: string;
 
   constructor() {
+    // Use the OS temp directory instead of hardcoding /tmp
+    this.tempDir = path.join(os.tmpdir(), 'pdf-conversion');
     this.ensureTempDir();
   }
 
@@ -59,8 +62,30 @@ export class LibreOfficePDFConverter {
     }
   }
 
+  private async getLibreOfficeCommand(): Promise<string> {
+    if (process.platform === 'win32') {
+      // Check common installation paths on Windows
+      const possiblePaths = [
+        'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
+        'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe'
+      ];
+      
+      for (const path of possiblePaths) {
+        try {
+          await fs.access(path);
+          return path;
+        } catch {
+          continue;
+        }
+      }
+      throw new Error('LibreOffice not found in common installation paths');
+    }
+    
+    return 'libreoffice'; // Default command for Unix-like systems
+  }
+
   private async runLibreOfficeConversion(inputPath: string, outputDir: string): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const args = [
         '--headless',
         '--invisible',
@@ -75,39 +100,44 @@ export class LibreOfficePDFConverter {
         inputPath
       ];
 
-      console.log('Running LibreOffice conversion:', 'libreoffice', args.join(' '));
+      try {
+        const command = await this.getLibreOfficeCommand();
+        console.log('Running LibreOffice conversion:', command, args.join(' '));
+        
+        const process = spawn(command, args, {
+          stdio: ['ignore', 'pipe', 'pipe'],
+          timeout: 30000 // 30 second timeout
+        });
 
-      const process = spawn('libreoffice', args, {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: 30000 // 30 second timeout
-      });
+        let stdout = '';
+        let stderr = '';
 
-      let stdout = '';
-      let stderr = '';
+        process.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
 
-      process.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
+        process.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
 
-      process.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
+        process.on('close', (code) => {
+          console.log(`LibreOffice process exited with code ${code}`);
+          console.log('stdout:', stdout);
+          console.log('stderr:', stderr);
 
-      process.on('close', (code) => {
-        console.log(`LibreOffice process exited with code ${code}`);
-        console.log('stdout:', stdout);
-        console.log('stderr:', stderr);
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`LibreOffice conversion failed with code ${code}. stderr: ${stderr}`));
+          }
+        });
 
-        if (code === 0) {
-          resolve();
-        } else {
-          reject(new Error(`LibreOffice conversion failed with code ${code}. stderr: ${stderr}`));
-        }
-      });
-
-      process.on('error', (error) => {
-        reject(new Error(`Failed to start LibreOffice: ${error.message}`));
-      });
+        process.on('error', (error) => {
+          reject(new Error(`Failed to start LibreOffice: ${error.message}`));
+        });
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
@@ -131,19 +161,31 @@ export class LibreOfficePDFConverter {
   }
 
   async checkLibreOfficeAvailability(): Promise<boolean> {
-    return new Promise((resolve) => {
-      const process = spawn('libreoffice', ['--version'], {
-        stdio: ['ignore', 'pipe', 'pipe']
-      });
+    try {
+      if (process.platform === 'win32') {
+        // On Windows, just check if we can find the executable
+        const command = await this.getLibreOfficeCommand();
+        await fs.access(command);
+        return true;
+      }
 
-      process.on('close', (code) => {
-        resolve(code === 0);
-      });
+      // On Unix-like systems, try running the command
+      return new Promise((resolve) => {
+        const process = spawn('libreoffice', ['--version'], {
+          stdio: ['ignore', 'pipe', 'pipe']
+        });
 
-      process.on('error', () => {
-        resolve(false);
+        process.on('close', (code) => {
+          resolve(code === 0);
+        });
+
+        process.on('error', () => {
+          resolve(false);
+        });
       });
-    });
+    } catch {
+      return false;
+    }
   }
 }
 
