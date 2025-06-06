@@ -272,7 +272,7 @@ const Activity = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
                     <p className="text-2xl font-bold text-blue-900">{activities.length}</p>
-                    <p className="text-xs text-blue-700 font-medium">Total Actions</p>
+                    <p className="text-xs text-blue-700 font-medium">Total Activities</p>
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
                     <p className="text-2xl font-bold text-green-900">{generatedPDFs.length}</p>

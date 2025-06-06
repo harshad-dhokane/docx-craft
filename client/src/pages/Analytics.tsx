@@ -42,9 +42,9 @@ const Analytics = () => {
         gradient: "from-green-500 to-green-600",
       },
       {
-        title: "Activities",
+        title: "Total Activities",
         value: recentActivities.toString(),
-        description: "Recent activities",
+        description: "All time actions",
         icon: Eye,
         trend: "+8%",
         trendUp: true,
