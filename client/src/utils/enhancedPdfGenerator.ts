@@ -28,7 +28,7 @@ interface GenerationOptions {
 // Helper function to convert base64 image to ImageData with proper format
 const convertBase64ToImageData = async (base64String: string, altText: string = ''): Promise<ImageData> => {
   console.log('Converting base64 to ImageData for:', altText);
-  
+
   try {
     // Validate base64 string
     if (!base64String || typeof base64String !== 'string') {
@@ -42,14 +42,14 @@ const convertBase64ToImageData = async (base64String: string, altText: string = 
     }
 
     const [, imageType, base64Data] = dataUrlMatch;
-    
+
     // Validate base64 data
     if (!base64Data || base64Data.length === 0) {
       throw new Error('Empty base64 data');
     }
 
     const buffer = Buffer.from(base64Data, 'base64');
-    
+
     // Validate buffer size
     if (buffer.length === 0) {
       throw new Error('Failed to decode base64 data');
@@ -58,7 +58,7 @@ const convertBase64ToImageData = async (base64String: string, altText: string = 
     // Determine format using proper MimeType enum based on detected type
     let format: MimeType;
     const normalizedType = imageType.toLowerCase();
-    
+
     switch (normalizedType) {
       case 'jpeg':
       case 'jpg':
@@ -80,9 +80,9 @@ const convertBase64ToImageData = async (base64String: string, altText: string = 
         console.warn(`Unsupported image type: ${imageType}, defaulting to PNG`);
         format = MimeType.Png;
     }
-    
+
     console.log(`Detected image format: ${format} (${imageType}), buffer size: ${buffer.length} bytes`);
-    
+
     // Use more reasonable dimensions for document layout
     return {
       _type: 'image',
@@ -101,13 +101,13 @@ const convertBase64ToImageData = async (base64String: string, altText: string = 
 const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, PlaceholderValue>): Promise<Blob> => {
   const workbook = new Workbook();
   await workbook.xlsx.load(templateBuffer);
-  
+
   workbook.worksheets.forEach(worksheet => {
     worksheet.eachRow((row) => {
       row.eachCell({ includeEmpty: true }, (cell) => {
         if (cell && cell.value !== null && cell.value !== undefined) {
           let cellText = '';
-          
+
           // Handle different cell value types safely
           if (typeof cell.value === 'string') {
             cellText = cell.value;
@@ -136,7 +136,7 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
             if (regex.test(finalText)) {
               // Handle different value types
               let replacementText = '';
-              
+
               if (typeof value === 'string') {
                 // Check if it's a base64 image
                 if (value.startsWith('data:image/') && value.includes('base64,')) {
@@ -154,7 +154,7 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
               } else {
                 replacementText = String(value || '');
               }
-              
+
               finalText = finalText.replace(regex, replacementText);
               hasChanges = true;
             }
@@ -162,7 +162,7 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
 
           if (hasChanges) {
             cell.value = finalText;
-            
+
             // Restore original styling
             if (originalStyle.font) cell.font = originalStyle.font;
             if (originalStyle.alignment) cell.alignment = originalStyle.alignment;
@@ -185,20 +185,20 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
 const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, PlaceholderValue>): Promise<Blob> => {
   console.log('Starting Word document processing...');
   const handler = new TemplateHandler();
-  
+
   // Process the data with exact format required by easy-template-x
   const processedData: Record<string, any> = {};
-  
+
   for (const [key, value] of Object.entries(data)) {
     console.log(`Processing placeholder: ${key}, type: ${typeof value}`);
-    
+
     if (typeof value === 'string') {
       // Check if it's a base64 image with more robust detection
       if (value.startsWith('data:image/') && value.includes('base64,')) {
         try {
           console.log(`Converting image for placeholder: ${key}, data length: ${value.length}`);
           const imageData = await convertBase64ToImageData(value, key);
-          
+
           // Use exact format as specified by easy-template-x documentation
           processedData[key] = {
             _type: 'image',
@@ -208,7 +208,7 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
             height: imageData.height,
             altText: imageData.altText || key
           };
-          
+
           console.log(`Successfully processed image for ${key}:`, {
             format: imageData.format,
             width: imageData.width,
@@ -261,11 +261,11 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
     console.log('Calling easy-template-x handler.process...');
     const doc = await handler.process(templateBuffer, processedData);
     console.log('Document processed successfully, size:', doc.byteLength);
-    
+
     if (doc.byteLength === 0) {
       throw new Error('Generated document is empty');
     }
-    
+
     return new Blob([doc], {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     });
@@ -275,7 +275,7 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
     if (error.stack) {
       console.error('Stack trace:', error.stack);
     }
-    
+
     // Provide more specific error information
     let errorMessage = 'Document processing failed';
     if (error.message.includes('image')) {
@@ -285,14 +285,14 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
     } else {
       errorMessage += ': ' + error.message;
     }
-    
+
     throw new Error(errorMessage);
   }
 };
 
 const convertToPdfUsingLibreOffice = async (blob: Blob, originalFileName: string): Promise<Blob> => {
   console.log('Converting to PDF using LibreOffice:', originalFileName);
-  
+
   try {
     const formData = new FormData();
     formData.append('file', blob, originalFileName);
@@ -309,11 +309,11 @@ const convertToPdfUsingLibreOffice = async (blob: Blob, originalFileName: string
 
     const pdfBlob = await response.blob();
     console.log('LibreOffice PDF conversion successful, size:', pdfBlob.size);
-    
+
     if (pdfBlob.size === 0) {
       throw new Error('PDF conversion resulted in an empty file');
     }
-    
+
     return pdfBlob;
   } catch (error) {
     console.error('LibreOffice conversion failed:', error);
@@ -334,7 +334,7 @@ export const generateEnhancedPDF = async ({
     console.log('Format:', format);
     console.log('User ID:', userId);
     console.log('Placeholder data keys:', Object.keys(placeholderData));
-    
+
     // Get template info from database
     console.log('Fetching template from database...');
     const { data: template, error: templateError } = await supabase
@@ -370,10 +370,10 @@ export const generateEnhancedPDF = async ({
     }
 
     console.log('Template file downloaded successfully, size:', fileData.size);
-    
+
     const templateBuffer = await fileData.arrayBuffer();
     console.log('Template buffer created, size:', templateBuffer.byteLength);
-    
+
     let resultBlob: Blob;
     let finalFormat = format;
 
@@ -420,7 +420,7 @@ export const generateEnhancedPDF = async ({
     // Upload to Supabase storage
     const storagePath = `${userId}/${Date.now()}-${fullFileName}`;
     console.log('Uploading to storage path:', storagePath);
-    
+
     const { error: uploadError } = await supabase.storage
       .from('generated-pdfs')
       .upload(storagePath, resultBlob);
