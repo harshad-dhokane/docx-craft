@@ -38,13 +38,6 @@ export function useProfiles() {
     mutationFn: async ({ display_name, avatar_url }: { display_name?: string; avatar_url?: string }) => {
       if (!user) throw new Error('User not authenticated');
 
-      // First check if profile exists
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single();
-
       const updates = {
         id: user.id,
         display_name,
@@ -52,25 +45,16 @@ export function useProfiles() {
         updated_at: new Date().toISOString(),
       };
 
-      let result;
-      if (existingProfile) {
-        // Update existing profile
-        result = await supabase
-          .from('profiles')
-          .update(updates)
-          .eq('id', user.id);
-      } else {
-        // Insert new profile
-        result = await supabase
-          .from('profiles')
-          .insert({
-            ...updates,
-            created_at: new Date().toISOString(),
-          });
-      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert(updates, {
+          onConflict: 'id'
+        })
+        .select()
+        .single();
 
-      if (result.error) throw result.error;
-      return result.data;
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });

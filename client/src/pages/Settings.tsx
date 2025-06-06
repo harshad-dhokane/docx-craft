@@ -10,6 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfiles } from "@/hooks/useProfiles";
+import { ChangePasswordDialog } from "@/components/settings/ChangePasswordDialog";
+import { TwoFactorDialog } from "@/components/settings/TwoFactorDialog";
+import { ActiveSessionsDialog } from "@/components/settings/ActiveSessionsDialog";
+import { DataExportDialog } from "@/components/settings/DataExportDialog";
+import { DeleteAccountDialog } from "@/components/settings/DeleteAccountDialog";
 import { User, Bell, Shield, Download, Trash2, Upload, Camera } from "lucide-react";
 import { useState, useRef } from "react";
 
@@ -50,7 +55,7 @@ const Settings = () => {
 
   const getUserInitials = () => {
     const name = profile?.display_name || user?.user_metadata?.name || user?.email || "";
-    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+    return name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
   return (
@@ -209,15 +214,21 @@ const Settings = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button variant="outline" className="w-full justify-start">
-              Change Password
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              Two-Factor Authentication
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              Active Sessions
-            </Button>
+            <ChangePasswordDialog>
+              <Button variant="outline" className="w-full justify-start">
+                Change Password
+              </Button>
+            </ChangePasswordDialog>
+            <TwoFactorDialog>
+              <Button variant="outline" className="w-full justify-start">
+                Two-Factor Authentication
+              </Button>
+            </TwoFactorDialog>
+            <ActiveSessionsDialog>
+              <Button variant="outline" className="w-full justify-start">
+                Active Sessions
+              </Button>
+            </ActiveSessionsDialog>
           </CardContent>
         </Card>
 
@@ -235,14 +246,18 @@ const Settings = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button variant="outline" className="w-full justify-start">
-              <Download className="h-4 w-4 mr-2" />
-              Export All Data
-            </Button>
-            <Button variant="outline" className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50">
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Account
-            </Button>
+            <DataExportDialog>
+              <Button variant="outline" className="w-full justify-start">
+                <Download className="h-4 w-4 mr-2" />
+                Export All Data
+              </Button>
+            </DataExportDialog>
+            <DeleteAccountDialog>
+              <Button variant="outline" className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Account
+              </Button>
+            </DeleteAccountDialog>
           </CardContent>
         </Card>
 
