@@ -1,8 +1,7 @@
-
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, Upload, Edit, Clock, TrendingUp, Calendar, Users, Activity as ActivityIcon, BarChart3 } from "lucide-react";
+import { FileText, Download, Upload, Edit, Clock, TrendingUp, Calendar, Activity as ActivityIcon, BarChart3 } from "lucide-react";
 import { useActivity } from "@/hooks/useActivity";
 import { useGeneratedPDFs } from "@/hooks/useGeneratedPDFs";
 import { formatDistanceToNow, startOfWeek, startOfMonth } from "date-fns";
@@ -23,7 +22,7 @@ const Activity = () => {
       return activityDate >= todayStart;
     }).length;
 
-    const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday as start of week
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
     const weekActivities = activities.filter(activity => {
       const activityDate = new Date(activity.created_at);
       return activityDate >= weekStart;
@@ -149,10 +148,10 @@ const Activity = () => {
           ))}
         </div>
 
-        {/* Main Content Grid - Responsive Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8">
+        {/* Main Content Grid - Redesigned Layout */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
           {/* Recent Activity Feed - Takes more space */}
-          <div className="lg:col-span-3">
+          <div className="xl:col-span-2">
             <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm h-full">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center text-lg sm:text-xl">
@@ -171,8 +170,8 @@ const Activity = () => {
                     <p className="text-gray-500 text-sm mt-2">Start using the app to see your activity history!</p>
                   </div>
                 ) : (
-                  <div className="space-y-3 sm:space-y-4 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                    {activities.slice(0, 15).map((activity) => {
+                  <div className="space-y-3 sm:space-y-4 max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    {activities.slice(0, 20).map((activity) => {
                       const ActivityIcon = getActivityIcon(activity.action);
                       return (
                         <div key={activity.id} className="group p-4 sm:p-6 rounded-xl hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 transition-all duration-300 border border-gray-100 hover:border-blue-200 hover:shadow-lg">
@@ -212,11 +211,10 @@ const Activity = () => {
             </Card>
           </div>
 
-          {/* Sidebar - Analytics and Distribution */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Activity Distribution */}
+          {/* Activity Distribution - Full width on mobile, sidebar on desktop */}
+          <div className="xl:col-span-1">
             {activityDistribution.length > 0 && (
-              <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
+              <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm h-fit">
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center text-lg sm:text-xl">
                     <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-purple-600" />
@@ -261,47 +259,36 @@ const Activity = () => {
                 </CardContent>
               </Card>
             )}
-
-            {/* Quick Metrics */}
-            <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
+            
+            {/* Summary Stats Card */}
+            <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm mt-6">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg sm:text-xl">Quick Metrics</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Activity Summary</CardTitle>
                 <CardDescription className="text-sm sm:text-base">
-                  Performance at a glance
+                  Overview of your usage
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-blue-800">Total Activities</span>
-                    <span className="text-lg font-bold text-blue-900">{activities.length}</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                    <p className="text-2xl font-bold text-blue-900">{activities.length}</p>
+                    <p className="text-xs text-blue-700 font-medium">Total Actions</p>
                   </div>
-                  <p className="text-xs text-blue-700">All recorded actions</p>
-                </div>
-
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-green-800">This Week</span>
-                    <span className="text-lg font-bold text-green-900">{quickStats[1].value}</span>
+                  <div className="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                    <p className="text-2xl font-bold text-green-900">{generatedPDFs.length}</p>
+                    <p className="text-xs text-green-700 font-medium">Documents</p>
                   </div>
-                  <p className="text-xs text-green-700">Actions this week</p>
                 </div>
-
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-purple-800">This Month</span>
-                    <span className="text-lg font-bold text-purple-900">{quickStats[2].value}</span>
+                
+                {activityDistribution.length > 0 && (
+                  <div className="pt-2">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Most Common Action:</p>
+                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                      <span className="text-sm font-semibold text-purple-800 capitalize">{activityDistribution[0].action}</span>
+                      <span className="text-sm font-bold text-purple-900">{activityDistribution[0].count} times</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-purple-700">Actions this month</p>
-                </div>
-
-                <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-xl border border-orange-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-orange-800">Documents</span>
-                    <span className="text-lg font-bold text-orange-900">{generatedPDFs.length}</span>
-                  </div>
-                  <p className="text-xs text-orange-700">Generated documents</p>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
