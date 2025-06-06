@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -22,7 +21,7 @@ export type FieldType = "text" | "number" | "date" | "image" | "textarea" | "ema
 
 const CompactFieldTypeSelector = ({ placeholder, value, onChange, className }: CompactFieldTypeSelectorProps) => {
   const [fieldType, setFieldType] = useState<FieldType>("text");
-  
+
   // Clean up the display name to be more readable
   const displayName = placeholder
     .replace(/_/g, ' ')
@@ -45,6 +44,21 @@ const CompactFieldTypeSelector = ({ placeholder, value, onChange, className }: C
   };
 
   const renderField = () => {
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          onChange(reader.result as string);
+        };
+        reader.onerror = () => {
+          console.error("Failed to read image as data URL");
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
     switch (fieldType) {
       case "image":
         return (
@@ -61,17 +75,8 @@ const CompactFieldTypeSelector = ({ placeholder, value, onChange, className }: C
             <div>
               <Input
                 type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      onChange(reader.result as string);
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                }}
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/bmp"
+                onChange={handleImageUpload}
                 className="text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-primary file:text-primary-foreground"
               />
             </div>

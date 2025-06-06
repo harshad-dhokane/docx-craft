@@ -29,28 +29,73 @@ interface GenerationOptions {
 const convertBase64ToImageData = async (base64String: string, altText: string = ''): Promise<ImageData> => {
   console.log('Converting base64 to ImageData for:', altText);
   
-  // Remove data URL prefix if present
-  const base64Data = base64String.replace(/^data:image\/[a-z]+;base64,/, '');
-  const buffer = Buffer.from(base64Data, 'base64');
-  
-  // Determine format from the original string and use proper MimeType
-  let format: MimeType = MimeType.Png; // Default to PNG
-  if (base64String.includes('data:image/jpeg') || base64String.includes('data:image/jpg')) {
-    format = MimeType.Jpeg;
-  } else if (base64String.includes('data:image/gif')) {
-    format = MimeType.Gif;
+  try {
+    // Validate base64 string
+    if (!base64String || typeof base64String !== 'string') {
+      throw new Error('Invalid base64 string provided');
+    }
+
+    // Extract and validate data URL components
+    const dataUrlMatch = base64String.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+    if (!dataUrlMatch) {
+      throw new Error('Invalid data URL format. Expected format: data:image/[type];base64,[data]');
+    }
+
+    const [, imageType, base64Data] = dataUrlMatch;
+    
+    // Validate base64 data
+    if (!base64Data || base64Data.length === 0) {
+      throw new Error('Empty base64 data');
+    }
+
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    // Validate buffer size
+    if (buffer.length === 0) {
+      throw new Error('Failed to decode base64 data');
+    }
+
+    // Determine format using proper MimeType enum based on detected type
+    let format: MimeType;
+    const normalizedType = imageType.toLowerCase();
+    
+    switch (normalizedType) {
+      case 'jpeg':
+      case 'jpg':
+        format = MimeType.Jpeg;
+        break;
+      case 'png':
+        format = MimeType.Png;
+        break;
+      case 'gif':
+        format = MimeType.Gif;
+        break;
+      case 'bmp':
+        format = MimeType.Bmp;
+        break;
+      case 'svg':
+        format = MimeType.Svg;
+        break;
+      default:
+        console.warn(`Unsupported image type: ${imageType}, defaulting to PNG`);
+        format = MimeType.Png;
+    }
+    
+    console.log(`Detected image format: ${format} (${imageType}), buffer size: ${buffer.length} bytes`);
+    
+    // Use more reasonable dimensions for document layout
+    return {
+      _type: 'image',
+      source: buffer,
+      format: format,
+      width: 300,  // Increased for better visibility
+      height: 200, // Maintain aspect ratio consideration
+      altText: altText || 'Inserted Image'
+    };
+  } catch (error) {
+    console.error('Error converting base64 to ImageData:', error);
+    throw new Error(`Image conversion failed: ${error.message}`);
   }
-  
-  console.log('Detected image format:', format);
-  
-  return {
-    _type: 'image',
-    source: buffer,
-    format: format,
-    width: 200,
-    height: 200,
-    altText: altText
-  };
 };
 
 const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, PlaceholderValue>): Promise<Blob> => {
@@ -89,18 +134,23 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
           Object.entries(data).forEach(([key, value]) => {
             const regex = new RegExp(`{{${key}}}`, 'g');
             if (regex.test(finalText)) {
-              // Handle different value types as objects
+              // Handle different value types
               let replacementText = '';
               
               if (typeof value === 'string') {
                 // Check if it's a base64 image
-                if (value.startsWith('data:image/')) {
-                  replacementText = '[Image]';
+                if (value.startsWith('data:image/') && value.includes('base64,')) {
+                  // Extract image type for better display
+                  const typeMatch = value.match(/data:image\/([^;]+)/);
+                  const imageType = typeMatch ? typeMatch[1].toUpperCase() : 'IMAGE';
+                  replacementText = `[${imageType} Image]`;
                 } else {
                   replacementText = value;
                 }
               } else if (value && typeof value === 'object' && '_type' in value && value._type === 'image') {
-                replacementText = '[Image]';
+                // Handle ImageData objects
+                const format = value.format ? value.format.split('/').pop()?.toUpperCase() : 'IMAGE';
+                replacementText = `[${format} Image]`;
               } else {
                 replacementText = String(value || '');
               }
@@ -140,13 +190,13 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
   const processedData: Record<string, any> = {};
   
   for (const [key, value] of Object.entries(data)) {
-    console.log(`Processing placeholder: ${key}`);
+    console.log(`Processing placeholder: ${key}, type: ${typeof value}`);
     
     if (typeof value === 'string') {
-      // Check if it's a base64 image
-      if (value.startsWith('data:image/')) {
+      // Check if it's a base64 image with more robust detection
+      if (value.startsWith('data:image/') && value.includes('base64,')) {
         try {
-          console.log(`Converting image for placeholder: ${key}`);
+          console.log(`Converting image for placeholder: ${key}, data length: ${value.length}`);
           const imageData = await convertBase64ToImageData(value, key);
           
           // Use exact format as specified by easy-template-x
@@ -156,56 +206,87 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
             format: imageData.format,
             width: imageData.width,
             height: imageData.height,
-            altText: imageData.altText || key
+            altText: imageData.altText
           };
           
           console.log(`Successfully processed image for ${key}:`, {
             format: imageData.format,
             width: imageData.width,
             height: imageData.height,
-            bufferSize: imageData.source.length
+            bufferSize: imageData.source.length,
+            altText: imageData.altText
           });
         } catch (error) {
           console.error(`Failed to process image for ${key}:`, error);
-          processedData[key] = '[Image could not be processed]';
+          // Provide more informative error message in document
+          processedData[key] = `[Image Error: ${error.message}]`;
         }
       } else {
+        // Regular text value
         processedData[key] = value;
       }
     } else if (value && typeof value === 'object' && '_type' in value && value._type === 'image') {
-      // Handle ImageData objects with proper format
-      processedData[key] = {
-        _type: 'image',
-        source: value.source,
-        format: value.format || MimeType.Png,
-        width: value.width,
-        height: value.height,
-        altText: value.altText || key
-      };
-      console.log(`Using existing ImageData for ${key}`);
+      // Handle pre-processed ImageData objects
+      try {
+        processedData[key] = {
+          _type: 'image',
+          source: value.source,
+          format: value.format || MimeType.Png,
+          width: value.width || 300,
+          height: value.height || 200,
+          altText: value.altText || key
+        };
+        console.log(`Using existing ImageData for ${key}`);
+      } catch (error) {
+        console.error(`Failed to process existing ImageData for ${key}:`, error);
+        processedData[key] = `[Image Error: ${error.message}]`;
+      }
     } else {
+      // Convert other values to string
       processedData[key] = String(value || '');
     }
   }
 
   console.log('Processing document with data keys:', Object.keys(processedData));
-  console.log('Processed data structure:', JSON.stringify(processedData, (key, value) => {
-    if (value instanceof Buffer) return '[Buffer]';
+  const logData = JSON.stringify(processedData, (key, value) => {
+    if (value instanceof Buffer) return `[Buffer: ${value.length} bytes]`;
+    if (typeof value === 'object' && value && '_type' in value && value._type === 'image') {
+      return `[ImageData: ${value.format}, ${value.width}x${value.height}]`;
+    }
     return value;
-  }, 2));
+  }, 2);
+  console.log('Processed data structure:', logData);
 
   try {
     console.log('Calling easy-template-x handler.process...');
     const doc = await handler.process(templateBuffer, processedData);
     console.log('Document processed successfully, size:', doc.byteLength);
+    
+    if (doc.byteLength === 0) {
+      throw new Error('Generated document is empty');
+    }
+    
     return new Blob([doc], {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     });
   } catch (error) {
     console.error('Error processing Word template:', error);
     console.error('Error details:', error.message);
-    console.error('Stack trace:', error.stack);
-    throw new Error(`Document processing failed: ${error.message}`);
+    if (error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
+    
+    // Provide more specific error information
+    let errorMessage = 'Document processing failed';
+    if (error.message.includes('image')) {
+      errorMessage += ': Image processing error - ' + error.message;
+    } else if (error.message.includes('template')) {
+      errorMessage += ': Template error - ' + error.message;
+    } else {
+      errorMessage += ': ' + error.message;
+    }
+    
+    throw new Error(errorMessage);
   }
 };
 
@@ -354,10 +435,16 @@ export const generateEnhancedPDF = async ({
     // Convert placeholderData to JSON-compatible format for database storage
     const jsonPlaceholderData: Record<string, any> = {};
     Object.entries(placeholderData).forEach(([key, value]) => {
-      if (typeof value === 'string' && value.startsWith('data:image/')) {
-        jsonPlaceholderData[key] = '[Image]';
+      if (typeof value === 'string' && value.startsWith('data:image/') && value.includes('base64,')) {
+        // Extract image type and size info for better tracking
+        const typeMatch = value.match(/data:image\/([^;]+)/);
+        const imageType = typeMatch ? typeMatch[1].toUpperCase() : 'UNKNOWN';
+        const sizeKB = Math.round(value.length * 0.75 / 1024); // Approximate size in KB
+        jsonPlaceholderData[key] = `[${imageType} Image - ~${sizeKB}KB]`;
       } else if (typeof value === 'object' && value && '_type' in value && value._type === 'image') {
-        jsonPlaceholderData[key] = '[Image]';
+        const format = value.format ? value.format.split('/').pop()?.toUpperCase() : 'IMAGE';
+        const sizeKB = value.source ? Math.round(value.source.length / 1024) : 0;
+        jsonPlaceholderData[key] = `[${format} Image - ${sizeKB}KB]`;
       } else {
         jsonPlaceholderData[key] = typeof value === 'string' ? value : String(value || '');
       }
