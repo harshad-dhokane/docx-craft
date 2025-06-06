@@ -2,13 +2,17 @@
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, Upload, Edit, Clock, TrendingUp, Calendar, Users } from "lucide-react";
+import { FileText, Download, Upload, Edit, Clock, TrendingUp, Calendar, Users, Activity as ActivityIcon } from "lucide-react";
 import { useActivity } from "@/hooks/useActivity";
+import { useGeneratedPDFs } from "@/hooks/useGeneratedPDFs";
 import { formatDistanceToNow } from "date-fns";
 import { useMemo } from "react";
 
 const Activity = () => {
-  const { activities, isLoading } = useActivity();
+  const { activities, isLoading: activitiesLoading } = useActivity();
+  const { generatedPDFs, isLoading: pdfsLoading } = useGeneratedPDFs();
+
+  const isLoading = activitiesLoading || pdfsLoading;
 
   const quickStats = useMemo(() => {
     const today = new Date();
@@ -29,13 +33,15 @@ const Activity = () => {
       return activityDate >= thisMonth;
     }).length;
 
+    const totalDocuments = generatedPDFs.length;
+
     return [
       { label: "Today's Activity", value: todayActivities.toString(), icon: Clock, color: "from-blue-500 to-blue-600" },
       { label: "This Week", value: weekActivities.toString(), icon: Calendar, color: "from-green-500 to-green-600" },
       { label: "This Month", value: monthActivities.toString(), icon: TrendingUp, color: "from-purple-500 to-purple-600" },
-      { label: "Total Activities", value: activities.length.toString(), icon: Users, color: "from-orange-500 to-orange-600" },
+      { label: "Total Documents", value: totalDocuments.toString(), icon: FileText, color: "from-orange-500 to-orange-600" },
     ];
-  }, [activities]);
+  }, [activities, generatedPDFs]);
 
   const getActivityBadge = (action: string) => {
     const badges = {
@@ -61,7 +67,7 @@ const Activity = () => {
       case 'edit':
         return Edit;
       default:
-        return FileText;
+        return ActivityIcon;
     }
   };
 
@@ -82,19 +88,23 @@ const Activity = () => {
   };
 
   const activityDistribution = useMemo(() => {
+    if (activities.length === 0) return [];
+
     const actionCounts = activities.reduce((acc, activity) => {
       acc[activity.action] = (acc[activity.action] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     const total = activities.length;
-    if (total === 0) return [];
 
-    return Object.entries(actionCounts).map(([action, count]) => ({
-      action,
-      count,
-      percentage: Math.round((count / total) * 100)
-    }));
+    return Object.entries(actionCounts)
+      .map(([action, count]) => ({
+        action,
+        count,
+        percentage: Math.round((count / total) * 100)
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5); // Show top 5 activity types
   }, [activities]);
 
   if (isLoading) {
@@ -112,7 +122,7 @@ const Activity = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 sm:space-y-8">
+      <div className="space-y-6 sm:space-y-8 p-4 sm:p-6">
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">Activity Center</h1>
           <p className="text-base sm:text-lg text-gray-600">Track your recent document generation and template activities.</p>
@@ -136,8 +146,8 @@ const Activity = () => {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
+          <div className="xl:col-span-2">
             <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center text-lg sm:text-xl">
@@ -150,38 +160,39 @@ const Activity = () => {
               </CardHeader>
               <CardContent>
                 {activities.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Clock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-600">No activities yet. Start using the app to see your activity history!</p>
+                  <div className="text-center py-12">
+                    <ActivityIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600 text-lg font-medium">No activities yet</p>
+                    <p className="text-gray-500 text-sm mt-2">Start using the app to see your activity history!</p>
                   </div>
                 ) : (
-                  <div className="space-y-3 sm:space-y-4 max-h-96 overflow-y-auto scrollbar-none">
-                    {activities.slice(0, 10).map((activity) => {
+                  <div className="space-y-3 sm:space-y-4 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    {activities.slice(0, 15).map((activity) => {
                       const ActivityIcon = getActivityIcon(activity.action);
                       return (
                         <div key={activity.id} className="group p-4 sm:p-6 rounded-xl hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 transition-all duration-300 border border-gray-100 hover:border-blue-200 hover:shadow-lg">
                           <div className="flex items-start space-x-3 sm:space-x-4">
-                            <div className={`p-2 sm:p-3 rounded-xl ${getActivityColor(activity.action)} shadow-md group-hover:shadow-lg transition-all duration-300`}>
+                            <div className={`p-2 sm:p-3 rounded-xl ${getActivityColor(activity.action)} shadow-md group-hover:shadow-lg transition-all duration-300 flex-shrink-0`}>
                               <ActivityIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                <div>
-                                  <p className="text-sm sm:text-base font-semibold text-gray-900 group-hover:text-blue-900 transition-colors duration-200">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm sm:text-base font-semibold text-gray-900 group-hover:text-blue-900 transition-colors duration-200 truncate">
                                     {activity.action.charAt(0).toUpperCase() + activity.action.slice(1)} {activity.resource_type || 'item'}
                                   </p>
                                   <p className="text-xs sm:text-sm text-gray-600 mt-1">
                                     {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
                                   </p>
                                   {activity.metadata && Object.keys(activity.metadata).length > 0 && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      {Object.entries(activity.metadata).slice(0, 2).map(([key, value]) => 
-                                        `${key}: ${String(value).substring(0, 20)}`
+                                    <p className="text-xs text-gray-500 mt-1 truncate">
+                                      {Object.entries(activity.metadata).slice(0, 1).map(([key, value]) => 
+                                        `${key}: ${String(value).substring(0, 30)}${String(value).length > 30 ? '...' : ''}`
                                       ).join(', ')}
                                     </p>
                                   )}
                                 </div>
-                                <Badge className={`${getActivityBadge(activity.action).color} border-0 shadow-sm text-xs sm:text-sm`}>
+                                <Badge className={`${getActivityBadge(activity.action).color} border-0 shadow-sm text-xs sm:text-sm flex-shrink-0`}>
                                   {getActivityBadge(activity.action).label}
                                 </Badge>
                               </div>
@@ -215,7 +226,7 @@ const Activity = () => {
 
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 sm:p-6 rounded-xl border border-green-200">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm sm:text-base font-semibold text-green-800">Recent Actions</span>
+                    <span className="text-sm sm:text-base font-semibold text-green-800">This Week</span>
                     <span className="text-lg sm:text-xl font-bold text-green-900">{quickStats[1].value}</span>
                   </div>
                   <p className="text-xs sm:text-sm text-green-700">Actions this week</p>
@@ -228,6 +239,14 @@ const Activity = () => {
                   </div>
                   <p className="text-xs sm:text-sm text-purple-700">Actions performed today</p>
                 </div>
+
+                <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-4 sm:p-6 rounded-xl border border-orange-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm sm:text-base font-semibold text-orange-800">Documents</span>
+                    <span className="text-lg sm:text-xl font-bold text-orange-900">{generatedPDFs.length}</span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-orange-700">Generated documents</p>
+                </div>
               </CardContent>
             </Card>
 
@@ -239,22 +258,31 @@ const Activity = () => {
                     Breakdown by action type
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3 sm:space-y-4">
+                <CardContent className="space-y-3 sm:space-y-4 overflow-hidden">
                   {activityDistribution.map((item, index) => {
-                    const colors = ['from-blue-500 to-blue-600', 'from-green-500 to-green-600', 'from-purple-500 to-purple-600', 'from-orange-500 to-orange-600'];
+                    const colors = [
+                      'from-blue-500 to-blue-600', 
+                      'from-green-500 to-green-600', 
+                      'from-purple-500 to-purple-600', 
+                      'from-orange-500 to-orange-600',
+                      'from-pink-500 to-pink-600'
+                    ];
                     const color = colors[index % colors.length];
                     
                     return (
-                      <div key={item.action} className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className={`w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-r ${color} rounded-full mr-2 sm:mr-3 shadow-sm`}></div>
-                          <span className="text-sm sm:text-base text-gray-700 font-medium capitalize">{item.action}</span>
+                      <div key={item.action} className="flex items-center justify-between gap-2">
+                        <div className="flex items-center min-w-0 flex-1">
+                          <div className={`w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-r ${color} rounded-full mr-2 sm:mr-3 shadow-sm flex-shrink-0`}></div>
+                          <span className="text-sm sm:text-base text-gray-700 font-medium capitalize truncate">{item.action}</span>
                         </div>
-                        <div className="flex items-center">
-                          <div className="w-20 sm:w-24 h-2 bg-gray-200 rounded-full mr-2 sm:mr-3">
-                            <div className={`h-2 bg-gradient-to-r ${color} rounded-full`} style={{ width: `${item.percentage}%` }}></div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="w-16 sm:w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-2 bg-gradient-to-r ${color} rounded-full transition-all duration-500`} 
+                              style={{ width: `${Math.min(item.percentage, 100)}%` }}
+                            ></div>
                           </div>
-                          <span className="text-sm sm:text-base font-semibold text-gray-900">{item.percentage}%</span>
+                          <span className="text-sm sm:text-base font-semibold text-gray-900 w-8 text-right">{item.percentage}%</span>
                         </div>
                       </div>
                     );
