@@ -195,12 +195,6 @@ const ImprovedFieldTypeSelector = ({ placeholder, value, onChange, className }: 
                   Text
                 </span>
               </SelectItem>
-              <SelectItem value="image">
-                <span className="flex items-center">
-                  <ImageIcon className="h-3 w-3 mr-2" />
-                  Image
-                </span>
-              </SelectItem>
               <SelectItem value="textarea">
                 <span className="flex items-center">
                   <AlignLeft className="h-3 w-3 mr-2" />

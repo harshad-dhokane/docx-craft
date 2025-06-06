@@ -190,12 +190,6 @@ const CompactFieldTypeSelector = ({ placeholder, value, onChange, className }: C
                 Text
               </span>
             </SelectItem>
-            <SelectItem value="image">
-              <span className="flex items-center text-xs">
-                <ImageIcon className="h-3 w-3 mr-1" />
-                Image
-              </span>
-            </SelectItem>
             <SelectItem value="textarea">
               <span className="flex items-center text-xs">
                 <AlignLeft className="h-3 w-3 mr-1" />
