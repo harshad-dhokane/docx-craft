@@ -99,26 +99,52 @@ const convertBase64ToImageData = async (base64String: string, altText: string = 
 };
 
 const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, PlaceholderValue>): Promise<Blob> => {
+  console.log('Processing Excel template with enhanced placeholder replacement...');
   const workbook = new Workbook();
   await workbook.xlsx.load(templateBuffer);
 
-  workbook.worksheets.forEach(worksheet => {
-    worksheet.eachRow((row) => {
-      row.eachCell({ includeEmpty: true }, (cell) => {
+  console.log(`Excel workbook loaded with ${workbook.worksheets.length} worksheets`);
+  
+  workbook.worksheets.forEach((worksheet, wsIndex) => {
+    console.log(`Processing worksheet ${wsIndex + 1}: ${worksheet.name || 'Unnamed'}`);
+    
+    worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
         if (cell && cell.value !== null && cell.value !== undefined) {
           let cellText = '';
 
-          // Handle different cell value types safely
+          // Enhanced cell value extraction
           if (typeof cell.value === 'string') {
             cellText = cell.value;
           } else if (typeof cell.value === 'number') {
             cellText = cell.value.toString();
-          } else if (cell.value && typeof cell.value === 'object' && 'text' in cell.value && cell.value.text) {
-            cellText = cell.value.text;
-          } else if (cell.text) {
+          } else if (typeof cell.value === 'boolean') {
+            cellText = cell.value.toString();
+          } else if (cell.value && typeof cell.value === 'object') {
+            // Handle Excel rich text and formula objects
+            if ('text' in cell.value && cell.value.text) {
+              cellText = String(cell.value.text);
+            } else if ('richText' in cell.value && Array.isArray(cell.value.richText)) {
+              cellText = cell.value.richText
+                .map((rt: any) => (rt && rt.text) ? String(rt.text) : '')
+                .join('');
+            } else if ('result' in cell.value && cell.value.result != null) {
+              cellText = String(cell.value.result);
+            } else if ('formula' in cell.value && cell.value.formula) {
+              cellText = String(cell.value.formula);
+            } else if ('hyperlink' in cell.value && cell.value.hyperlink) {
+              cellText = String(cell.value.hyperlink);
+            } else {
+              cellText = String(cell.value);
+            }
+          }
+
+          // Also check cell text property
+          if (!cellText && cell.text) {
             cellText = cell.text;
           }
 
+          // Store original styling
           const originalStyle = {
             font: cell.font ? { ...cell.font } : undefined,
             alignment: cell.alignment ? { ...cell.alignment } : undefined,
@@ -131,36 +157,52 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
           let finalText = cellText;
           let hasChanges = false;
 
+          // Process multiple placeholder patterns
           Object.entries(data).forEach(([key, value]) => {
-            const regex = new RegExp(`{{${key}}}`, 'g');
-            if (regex.test(finalText)) {
-              // Handle different value types
-              let replacementText = '';
+            // Pattern 1: {{placeholder}}
+            const doubleBraceRegex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+            // Pattern 2: {placeholder}
+            const singleBraceRegex = new RegExp(`\\{${key}\\}`, 'g');
+            // Pattern 3: <<placeholder>>
+            const angleBraceRegex = new RegExp(`<<${key}>>`, 'g');
+            // Pattern 4: $placeholder$
+            const dollarRegex = new RegExp(`\\$${key}\\$`, 'g');
 
-              if (typeof value === 'string') {
-                // Check if it's a base64 image
-                if (value.startsWith('data:image/') && value.includes('base64,')) {
-                  // Extract image type for better display
-                  const typeMatch = value.match(/data:image\/([^;]+)/);
-                  const imageType = typeMatch ? typeMatch[1].toUpperCase() : 'IMAGE';
-                  replacementText = `[${imageType} Image]`;
+            const patterns = [doubleBraceRegex, singleBraceRegex, angleBraceRegex, dollarRegex];
+            
+            patterns.forEach((regex, patternIndex) => {
+              if (regex.test(finalText)) {
+                console.log(`Found placeholder "${key}" in cell ${getCellAddress(rowNumber, colNumber)} using pattern ${patternIndex + 1}`);
+                
+                // Handle different value types
+                let replacementText = '';
+
+                if (typeof value === 'string') {
+                  // Check if it's a base64 image
+                  if (value.startsWith('data:image/') && value.includes('base64,')) {
+                    // Extract image type for better display
+                    const typeMatch = value.match(/data:image\/([^;]+)/);
+                    const imageType = typeMatch ? typeMatch[1].toUpperCase() : 'IMAGE';
+                    replacementText = `[${imageType} Image]`;
+                  } else {
+                    replacementText = value;
+                  }
+                } else if (value && typeof value === 'object' && '_type' in value && value._type === 'image') {
+                  // Handle ImageData objects
+                  const format = value.format ? value.format.split('/').pop()?.toUpperCase() : 'IMAGE';
+                  replacementText = `[${format} Image]`;
                 } else {
-                  replacementText = value;
+                  replacementText = String(value || '');
                 }
-              } else if (value && typeof value === 'object' && '_type' in value && value._type === 'image') {
-                // Handle ImageData objects
-                const format = value.format ? value.format.split('/').pop()?.toUpperCase() : 'IMAGE';
-                replacementText = `[${format} Image]`;
-              } else {
-                replacementText = String(value || '');
-              }
 
-              finalText = finalText.replace(regex, replacementText);
-              hasChanges = true;
-            }
+                finalText = finalText.replace(regex, replacementText);
+                hasChanges = true;
+              }
+            });
           });
 
           if (hasChanges) {
+            console.log(`Updated cell ${getCellAddress(rowNumber, colNumber)}: "${cellText}" -> "${finalText}"`);
             cell.value = finalText;
 
             // Restore original styling
@@ -176,10 +218,25 @@ const handleExcel = async (templateBuffer: ArrayBuffer, data: Record<string, Pla
     });
   });
 
+  console.log('Excel processing complete, generating buffer...');
   const buffer = await workbook.xlsx.writeBuffer();
+  console.log(`Excel buffer generated, size: ${buffer.byteLength} bytes`);
+  
   return new Blob([buffer], { 
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
   });
+};
+
+// Helper function for Excel cell address (add to global scope)
+const getCellAddress = (row: number, col: number): string => {
+  let columnName = '';
+  let colNum = col;
+  while (colNum > 0) {
+    colNum--;
+    columnName = String.fromCharCode(65 + (colNum % 26)) + columnName;
+    colNum = Math.floor(colNum / 26);
+  }
+  return columnName + row;
 };
 
 const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, PlaceholderValue>): Promise<Blob> => {

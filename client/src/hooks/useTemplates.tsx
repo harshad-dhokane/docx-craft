@@ -6,6 +6,18 @@ import { useToast } from "./use-toast";
 import { Workbook } from 'exceljs';
 import { TemplateHandler } from 'easy-template-x';
 
+// Helper function to convert row and column numbers to Excel cell address
+const getCellAddress = (row: number, col: number): string => {
+  let columnName = '';
+  let colNum = col;
+  while (colNum > 0) {
+    colNum--;
+    columnName = String.fromCharCode(65 + (colNum % 26)) + columnName;
+    colNum = Math.floor(colNum / 26);
+  }
+  return columnName + row;
+};
+
 const extractPlaceholders = async (file: File): Promise<string[]> => {
   const placeholders = new Set<string>();
   
@@ -13,7 +25,7 @@ const extractPlaceholders = async (file: File): Promise<string[]> => {
   
   try {
     if (file.name.endsWith('.xlsx') || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
-      console.log('Processing Excel file...');
+      console.log('Processing Excel file with enhanced extraction...');
       
       try {
         const workbook = new Workbook();
@@ -24,74 +36,117 @@ const extractPlaceholders = async (file: File): Promise<string[]> => {
         console.log('Excel workbook loaded successfully');
         
         workbook.worksheets.forEach((worksheet, wsIndex) => {
-          console.log(`Processing worksheet ${wsIndex + 1}:`, worksheet.name);
+          console.log(`Processing worksheet ${wsIndex + 1}:`, worksheet.name || `Sheet${wsIndex + 1}`);
           
-          worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+          // Process all rows including empty ones to catch placeholders
+          worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
             try {
-              if (!row || !row.values) return;
-              
-              // Convert row.values to array and process each cell
-              const values = Array.isArray(row.values) ? row.values : [];
-              
-              values.forEach((cellValue, colIndex) => {
-                if (!cellValue) return;
-                
+              // Process each cell in the row
+              row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
                 try {
                   let cellText = '';
                   
-                  // Handle different cell value types
-                  if (typeof cellValue === 'string') {
-                    cellText = cellValue;
-                  } else if (typeof cellValue === 'number') {
-                    cellText = cellValue.toString();
-                  } else if (cellValue && typeof cellValue === 'object') {
-                    // Handle Excel formula objects and rich text
-                    if ('text' in cellValue && cellValue.text) {
-                      cellText = String(cellValue.text);
-                    } else if ('richText' in cellValue && Array.isArray(cellValue.richText)) {
-                      cellText = cellValue.richText
+                  // Handle different cell value types more comprehensively
+                  if (cell.value === null || cell.value === undefined) {
+                    return; // Skip empty cells
+                  }
+                  
+                  if (typeof cell.value === 'string') {
+                    cellText = cell.value;
+                  } else if (typeof cell.value === 'number') {
+                    cellText = cell.value.toString();
+                  } else if (typeof cell.value === 'boolean') {
+                    cellText = cell.value.toString();
+                  } else if (cell.value && typeof cell.value === 'object') {
+                    // Handle Excel rich text and formula objects
+                    if ('text' in cell.value && cell.value.text) {
+                      cellText = String(cell.value.text);
+                    } else if ('richText' in cell.value && Array.isArray(cell.value.richText)) {
+                      cellText = cell.value.richText
                         .map((rt: any) => (rt && rt.text) ? String(rt.text) : '')
                         .join('');
-                    } else if ('result' in cellValue && cellValue.result != null) {
-                      cellText = String(cellValue.result);
-                    } else if ('formula' in cellValue && cellValue.formula) {
-                      cellText = String(cellValue.formula);
+                    } else if ('result' in cell.value && cell.value.result != null) {
+                      cellText = String(cell.value.result);
+                    } else if ('formula' in cell.value && cell.value.formula) {
+                      cellText = String(cell.value.formula);
+                    } else if ('hyperlink' in cell.value && cell.value.hyperlink) {
+                      cellText = String(cell.value.hyperlink);
                     } else {
                       // Fallback: try to convert to string
-                      cellText = String(cellValue);
+                      cellText = String(cell.value);
                     }
                   }
                   
-                  // Extract placeholders using regex
+                  // Also check cell text property
+                  if (!cellText && cell.text) {
+                    cellText = cell.text;
+                  }
+                  
+                  // Extract placeholders using multiple regex patterns
                   if (cellText && cellText.length > 0) {
-                    const matches = cellText.match(/\{\{([^}]+)\}\}/g);
-                    if (matches && matches.length > 0) {
-                      matches.forEach(match => {
+                    // Pattern 1: {{placeholder}}
+                    const doubleBraceMatches = cellText.match(/\{\{([^}]+)\}\}/g);
+                    if (doubleBraceMatches) {
+                      doubleBraceMatches.forEach(match => {
                         const placeholder = match.replace(/[{}]/g, '').trim();
                         if (placeholder && placeholder.length > 0) {
                           placeholders.add(placeholder);
-                          console.log(`Found Excel placeholder: "${placeholder}" at row ${rowNumber}, col ${colIndex}`);
+                          console.log(`Found Excel placeholder: "${placeholder}" at row ${rowNumber}, col ${colNumber} (${getCellAddress(rowNumber, colNumber)})`);
+                        }
+                      });
+                    }
+                    
+                    // Pattern 2: {placeholder}
+                    const singleBraceMatches = cellText.match(/\{([^{}]+)\}/g);
+                    if (singleBraceMatches) {
+                      singleBraceMatches.forEach(match => {
+                        const placeholder = match.replace(/[{}]/g, '').trim();
+                        // Only add if it doesn't look like a formula or function
+                        if (placeholder && placeholder.length > 0 && !placeholder.includes('=') && !placeholder.includes('(')) {
+                          placeholders.add(placeholder);
+                          console.log(`Found Excel placeholder (single brace): "${placeholder}" at row ${rowNumber}, col ${colNumber} (${getCellAddress(rowNumber, colNumber)})`);
+                        }
+                      });
+                    }
+                    
+                    // Pattern 3: <<placeholder>>
+                    const angleBraceMatches = cellText.match(/<<([^>]+)>>/g);
+                    if (angleBraceMatches) {
+                      angleBraceMatches.forEach(match => {
+                        const placeholder = match.replace(/[<>]/g, '').trim();
+                        if (placeholder && placeholder.length > 0) {
+                          placeholders.add(placeholder);
+                          console.log(`Found Excel placeholder (angle brackets): "${placeholder}" at row ${rowNumber}, col ${colNumber} (${getCellAddress(rowNumber, colNumber)})`);
+                        }
+                      });
+                    }
+                    
+                    // Pattern 4: $placeholder$ (alternative style)
+                    const dollarMatches = cellText.match(/\$([^$]+)\$/g);
+                    if (dollarMatches) {
+                      dollarMatches.forEach(match => {
+                        const placeholder = match.replace(/\$/g, '').trim();
+                        if (placeholder && placeholder.length > 0 && !placeholder.includes('=')) {
+                          placeholders.add(placeholder);
+                          console.log(`Found Excel placeholder (dollar style): "${placeholder}" at row ${rowNumber}, col ${colNumber} (${getCellAddress(rowNumber, colNumber)})`);
                         }
                       });
                     }
                   }
                 } catch (cellError) {
-                  console.warn(`Error processing cell at row ${rowNumber}, col ${colIndex}:`, cellError);
-                  // Continue processing other cells
+                  console.warn(`Error processing cell at row ${rowNumber}, col ${colNumber}:`, cellError);
                 }
               });
             } catch (rowError) {
               console.warn(`Error processing row ${rowNumber}:`, rowError);
-              // Continue processing other rows
             }
           });
         });
         
-        console.log(`Excel processing complete. Found ${placeholders.size} unique placeholders.`);
+        console.log(`Excel processing complete. Found ${placeholders.size} unique placeholders:`, Array.from(placeholders));
         
       } catch (excelError) {
         console.error('Error processing Excel file:', excelError);
-        // Don't throw error, just log and return empty placeholders
         console.log('Continuing with empty placeholders due to Excel processing error');
       }
       
@@ -186,7 +241,7 @@ const extractPlaceholders = async (file: File): Promise<string[]> => {
     
   } catch (error) {
     console.error('Critical error in placeholder extraction:', error);
-    console.error('Error stack:', error?.stack);
+    console.error('Error stack:', (error as Error)?.stack);
     
     // Always return empty array instead of throwing to prevent upload failure
     console.log('Returning empty placeholders array due to critical error');
@@ -259,7 +314,7 @@ export const useTemplates = () => {
         console.log('Placeholder extraction completed successfully:', placeholders);
       } catch (extractError) {
         console.error('Placeholder extraction failed completely:', extractError);
-        console.error('Extract error details:', extractError?.message);
+        console.error('Extract error details:', (extractError as Error)?.message);
         // Continue with empty placeholders instead of failing
         placeholders = [];
         console.log('Proceeding with empty placeholders due to extraction failure');
