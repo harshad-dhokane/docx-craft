@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,9 @@ import { generateEnhancedPDF } from "@/utils/enhancedPdfGenerator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const TemplateGenerator = () => {
-  const { templateId } = useParams<{ templateId: string }>();
-  const navigate = useNavigate();
+  const [match, params] = useRoute("/templates/:templateId/generate");
+  const [, setLocation] = useLocation();
+  const templateId = params?.templateId;
   const { templates } = useTemplates();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -135,7 +136,7 @@ const TemplateGenerator = () => {
       <div className="container mx-auto p-6 max-w-7xl">
         <Button
           variant="ghost"
-          onClick={() => navigate(-1)}
+          onClick={() => setLocation("/templates")}
           className="mb-6"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -154,7 +155,7 @@ const TemplateGenerator = () => {
               <p className="text-muted-foreground text-center">
                 The template you're looking for doesn't exist or has been removed.
               </p>
-              <Button onClick={() => navigate('/templates')}>
+              <Button onClick={() => setLocation('/templates')}>
                 View All Templates
               </Button>
             </CardContent>
