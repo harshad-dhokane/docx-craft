@@ -11,10 +11,10 @@ const Index = () => {
 
   const handleGetStarted = () => {
     if (user) {
-      navigate("/dashboard");
+      setLocation("/dashboard");
     } else {
       // Navigate to protected route which will show auth page
-      navigate("/dashboard");
+      setLocation("/dashboard");
     }
   };
 
@@ -32,7 +32,7 @@ const Index = () => {
         </div>
         <div className="space-x-4">
           {user ? (
-            <Button onClick={() => navigate("/dashboard")}>
+            <Button onClick={() => setLocation("/dashboard")}>
               Go to Dashboard
             </Button>
           ) : (
