@@ -6,7 +6,7 @@ import { convertToPdfOnServer, checkServerHealth } from './serverPdfGenerator';
 
 interface ImageData {
   _type: 'image';
-  source: Uint8Array;
+  source: Buffer;
   format: MimeType;
   width: number;
   height: number;
@@ -84,15 +84,12 @@ const convertBase64ToImageData = async (base64String: string, altText: string = 
     console.log(`Detected image format: ${format} (${imageType}), buffer size: ${buffer.length} bytes`);
     
     // Use more reasonable dimensions for document layout
-    // Convert Buffer to Uint8Array for easy-template-x compatibility
-    const uint8Array = new Uint8Array(buffer);
-    
     return {
       _type: 'image',
-      source: uint8Array,
+      source: buffer,
       format: format,
-      width: 300,  // Increased for better visibility
-      height: 200, // Maintain aspect ratio consideration
+      width: 200,  // Match example dimensions
+      height: 200, // Match example dimensions
       altText: altText || 'Inserted Image'
     };
   } catch (error) {
@@ -202,21 +199,21 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
           console.log(`Converting image for placeholder: ${key}, data length: ${value.length}`);
           const imageData = await convertBase64ToImageData(value, key);
           
-          // Use exact format as specified by easy-template-x
+          // Use exact format as specified by easy-template-x documentation
           processedData[key] = {
             _type: 'image',
             source: imageData.source,
             format: imageData.format,
             width: imageData.width,
             height: imageData.height,
-            altText: imageData.altText
+            altText: imageData.altText || key
           };
           
           console.log(`Successfully processed image for ${key}:`, {
             format: imageData.format,
             width: imageData.width,
             height: imageData.height,
-            bufferSize: imageData.source.byteLength,
+            bufferSize: imageData.source.length,
             altText: imageData.altText
           });
         } catch (error) {
@@ -235,7 +232,7 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
           _type: 'image',
           source: value.source,
           format: value.format || MimeType.Png,
-          width: value.width || 300,
+          width: value.width || 200,
           height: value.height || 200,
           altText: value.altText || key
         };
@@ -252,7 +249,6 @@ const handleWord = async (templateBuffer: ArrayBuffer, data: Record<string, Plac
 
   console.log('Processing document with data keys:', Object.keys(processedData));
   const logData = JSON.stringify(processedData, (key, value) => {
-    if (value instanceof Uint8Array) return `[Uint8Array: ${value.byteLength} bytes]`;
     if (value instanceof Buffer) return `[Buffer: ${value.length} bytes]`;
     if (typeof value === 'object' && value && '_type' in value && value._type === 'image') {
       return `[ImageData: ${value.format}, ${value.width}x${value.height}]`;
@@ -447,7 +443,7 @@ export const generateEnhancedPDF = async ({
         jsonPlaceholderData[key] = `[${imageType} Image - ~${sizeKB}KB]`;
       } else if (typeof value === 'object' && value && '_type' in value && value._type === 'image') {
         const format = value.format ? value.format.split('/').pop()?.toUpperCase() : 'IMAGE';
-        const sizeKB = value.source ? Math.round(value.source.byteLength / 1024) : 0;
+        const sizeKB = value.source ? Math.round(value.source.length / 1024) : 0;
         jsonPlaceholderData[key] = `[${format} Image - ${sizeKB}KB]`;
       } else {
         jsonPlaceholderData[key] = typeof value === 'string' ? value : String(value || '');
