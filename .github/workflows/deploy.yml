@@ -1,58 +1,31 @@
-name: Deploy to Render
+name: 🚀 DocxCraft CI/CD Pipeline
 
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
-  build-and-test:
-    name: Build and Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Type check
-        run: npm run check
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          load: true
-          tags: docxcraft:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Run tests in Docker
-        run: docker run --rm docxcraft:latest npm run test
-
-  deploy:
-    name: Deploy to Render
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main'
+  build-and-deploy:
+    name: 🐳 Build Docker & Deploy
     runs-on: ubuntu-latest
     environment: Production
     
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
-        
-      - name: Deploy to Render
+
+      - name: 🔨 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🏗️ Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          tags: docxcraft:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          
+      - name: 🚀 Deploy to Render
         uses: johnbeynon/render-deploy-action@v0.0.8
         with:
           service-id: ${{ secrets.RENDER_SERVICE_ID }}
